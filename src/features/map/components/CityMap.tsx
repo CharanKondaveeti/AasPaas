@@ -106,10 +106,10 @@ export default function CityMap(props: Props) {
             ] as const;
             const sceneryImages = await Promise.allSettled([
               ...GREENERY_ASSETS.map(async asset => {
-                const image = new Image(96, 96);
+                const image = new Image(80, 80);
                 image.src = greeneryImagePath(asset.id);
                 await image.decode();
-                return { id: asset.id as string, image, pixelRatio: 1.3 };
+                return { id: asset.id as string, image, pixelRatio: 1.2 };
               }),
               ...legacySprites.map(async ([id, path]) => {
                 const image = new Image(128, 128);
