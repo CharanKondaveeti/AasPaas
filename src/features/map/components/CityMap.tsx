@@ -23,7 +23,8 @@ export default function CityMap(props: Props) {
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     pickMarker = useRef<Marker | null>(null),
-    generatedScenery = useRef(false);
+    generatedScenery = useRef(false),
+    knownNaturePlaces = useRef<Place[]>([]);
   latest.current = props;
   const [ready, setReady] = useState(false),
     [error, setError] = useState(""),
@@ -395,9 +396,17 @@ export default function CityMap(props: Props) {
 
   // Existing projects work without the optional generated GeoJSON file.
   useEffect(() => {
+    // Preserve park scenery across Food / Places filters even when the
+    // generated OSM dataset has not been downloaded yet.
+    for (const place of props.places) {
+      if (place.category === "Nature" &&
+          !knownNaturePlaces.current.some(item => item.id === place.id)) {
+        knownNaturePlaces.current.push(place);
+      }
+    }
     if (!ready || generatedScenery.current) return;
     const source = map.current?.getSource("aaspaas-scenery") as GeoJSONSource | undefined;
-    source?.setData(makeCityScenery(props.places));
+    source?.setData(makeCityScenery(knownNaturePlaces.current));
   }, [props.places, ready]);
 
   useEffect(() => {
