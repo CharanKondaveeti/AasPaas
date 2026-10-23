@@ -152,14 +152,14 @@ export default function CityMap(props: Props) {
                 layout: {
                   // If a new asset fails, keep the old tree icon as a fallback.
                   "icon-image": ["coalesce", ["image", ["get", "sprite"]], ["image", "tree-sprite-a"]],
+                  // MapLibre requires ["zoom"] to be the direct input
+                  // of a top-level interpolate/step expression. Do not
+                  // wrap that expression in a multiply or match operator.
                   "icon-size": [
-                    "*",
-                    ["interpolate", ["linear"], ["zoom"],
-                      layer.size[0], layer.size[1],
-                      layer.size[2], layer.size[3],
-                      layer.size[4], layer.size[5]],
-                    ["match", ["get", "kind"],
-                      "bush", 0.78, "hedge", 0.72, "forest", 1.12, 1],
+                    "interpolate", ["linear"], ["zoom"],
+                    layer.size[0], layer.size[1],
+                    layer.size[2], layer.size[3],
+                    layer.size[4], layer.size[5],
                   ],
                   "icon-allow-overlap": false,
                   // Decorative images must not hide important place labels.
