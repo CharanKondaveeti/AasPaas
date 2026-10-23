@@ -9,6 +9,7 @@ import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, addNativeParkB
 import { isParkPlace, loadGeneratedScenery } from "../layers/scenery";
 import { GREENERY_ASSETS, greeneryImagePath } from "../layers/greeneryAssets";
 import { iconNames, iconFor } from "../layers/icons";
+import { INITIAL_CITY_ZOOM, PLACES_REVEAL_ZOOM, PLACES_FULLY_VISIBLE_ZOOM, cityIntroOpacity } from "../layers/discoveryZoom";
 type Props = {
   places: Place[];
   selected: Place | null;
@@ -20,6 +21,7 @@ type Props = {
 };
 export default function CityMap(props: Props) {
   const container = useRef<HTMLDivElement>(null),
+    cityIntro = useRef<HTMLDivElement>(null),
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     pickMarker = useRef<Marker | null>(null),
@@ -47,7 +49,7 @@ export default function CityMap(props: Props) {
           container: container.current,
           style,
           center: CITY_CENTER,
-          zoom: 12.05,
+          zoom: INITIAL_CITY_ZOOM,
           minZoom: 9,
           maxZoom: 19,
           attributionControl: { compact: true },
@@ -58,6 +60,14 @@ export default function CityMap(props: Props) {
           canvasContextAttributes: { antialias: true },
         });
         map.current = instance;
+        // Update a single overlay element instead of rerendering React while
+        // zooming. The overlay never intercepts mouse or touch interactions.
+        const syncCityIntro = () => {
+          if (!instance || !cityIntro.current) return;
+          cityIntro.current.style.opacity = String(cityIntroOpacity(instance.getZoom()));
+        };
+        instance.on("zoom", syncCityIntro);
+        syncCityIntro();
         // Keep WebGL size in sync with the actual map container.
         resizeObserver = new ResizeObserver(() => {
           if (!disposed && instance) instance.resize();
@@ -174,12 +184,23 @@ export default function CityMap(props: Props) {
               },
             });
 
+            // At city scale there are no individual or grouped place pins.
+            // After zooming closer, icons fade in together.
+            const revealPaint: maplibregl.SymbolLayerSpecification["paint"] = {
+              "icon-opacity": [
+                "interpolate", ["linear"], ["zoom"],
+                PLACES_REVEAL_ZOOM, 0,
+                PLACES_FULLY_VISIBLE_ZOOM, 1,
+              ],
+            };
+
             // For two nearby places show two overlapping icons; for 3+
             // show three. These are canvas/WebGL symbols, not laggy HTML markers.
             instance.addLayer({
               id: "cluster-icon-left",
               type: "symbol",
               source: "places",
+              minzoom: PLACES_REVEAL_ZOOM,
               filter: ["has", "point_count"],
               layout: {
                 "icon-image": [
@@ -195,11 +216,13 @@ export default function CityMap(props: Props) {
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": false,
               },
+              paint: revealPaint,
             });
             instance.addLayer({
               id: "cluster-icon-middle",
               type: "symbol",
               source: "places",
+              minzoom: PLACES_REVEAL_ZOOM,
               filter: ["has", "point_count"],
               layout: {
                 "icon-image": [
@@ -215,11 +238,13 @@ export default function CityMap(props: Props) {
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": false,
               },
+              paint: revealPaint,
             });
             instance.addLayer({
               id: "cluster-icon-right",
               type: "symbol",
               source: "places",
+              minzoom: PLACES_REVEAL_ZOOM,
               filter: ["all", ["has", "point_count"], [">=", ["get", "point_count"], 3]],
               layout: {
                 "icon-image": [
@@ -235,11 +260,13 @@ export default function CityMap(props: Props) {
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": false,
               },
+              paint: revealPaint,
             });
             instance.addLayer({
               id: "place-icons",
               type: "symbol",
               source: "places",
+              minzoom: PLACES_REVEAL_ZOOM,
               filter: ["!", ["has", "point_count"]],
               layout: {
                 "icon-image": ["get", "icon"],
@@ -260,6 +287,7 @@ export default function CityMap(props: Props) {
                 "text-max-width": 11,
               },
               paint: {
+                "icon-opacity": ["interpolate", ["linear"], ["zoom"], PLACES_REVEAL_ZOOM, 0, PLACES_FULLY_VISIBLE_ZOOM, 1],
                 "text-color": "#24493c",
                 "text-halo-color": "#ffffff",
                 "text-halo-width": 2,
@@ -439,6 +467,14 @@ export default function CityMap(props: Props) {
         className="map-canvas"
         aria-label="Interactive Hyderabad map"
       />
+      <div
+        ref={cityIntro}
+        className="city-map-intro"
+        style={{ opacity: cityIntroOpacity(INITIAL_CITY_ZOOM) }}
+        aria-hidden="true"
+      >
+        <span className="city-map-intro-title">HYDERABAD</span>
+      </div>
       {!ready && !error && (
         <div className="map-loading">Opening Hyderabad…</div>
       )}
@@ -485,7 +521,7 @@ export default function CityMap(props: Props) {
           onClick={() =>
             map.current?.flyTo({
               center: CITY_CENTER,
-              zoom: 11.8,
+              zoom: INITIAL_CITY_ZOOM,
               pitch: 0,
               bearing: 0,
             })
