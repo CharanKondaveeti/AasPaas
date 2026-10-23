@@ -1,0 +1,39 @@
+{
+  "name": "aaspaas",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "next typegen --webpack && tsc --noEmit",
+    "test": "node --import tsx --conditions=react-server --test tests/*.test.ts",
+    "postinstall": "node scripts/prepare-map.mjs",
+    "format": "prettier --write src tests scripts docs README.md *.json *.ts *.mjs .github/workflows/*.yml"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "lucide-react": "0.468.0",
+    "maplibre-gl": "6.15.0",
+    "next": "16.4.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "server-only": "0.0.1",
+    "sharp": "0.35.5",
+    "three": "0.180.0",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
+    "@electric-sql/pglite-postgis": "0.2.11",
+    "@tailwindcss/postcss": "4.1.17",
+    "@types/node": "22.19.0",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@types/three": "0.180.0",
+    "prettier": "3.6.2",
+    "tailwindcss": "4.1.17",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}
