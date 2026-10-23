@@ -6,7 +6,6 @@ import { Map as LibreMap, GeoJSONSource, Marker } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
 import { loadCityStyle, applyCityPalette } from "../layers/style";
-import { isFeaturedPlace, makeIllustratedMarker } from "../layers/illustrations";
 import { makeCityScenery, loadGeneratedScenery } from "../layers/scenery";
 import { iconNames, iconFor } from "../layers/icons";
 type Props = {
@@ -23,7 +22,6 @@ export default function CityMap(props: Props) {
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     pickMarker = useRef<Marker | null>(null),
-    illustratedMarkers = useRef<Marker[]>([]),
     generatedScenery = useRef(false);
   latest.current = props;
   const [ready, setReady] = useState(false),
@@ -127,37 +125,84 @@ export default function CityMap(props: Props) {
                 "icon-anchor": "bottom",
               },
             }, firstBasemapLabel);
+            // Keep native MapLibre clustering for speed, but render only
+            // nearby category symbols; never render a number bubble.
             instance.addSource("places", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
               cluster: true,
               clusterMaxZoom: 14,
-              clusterRadius: 48,
-            });
-            instance.addLayer({
-              id: "clusters",
-              type: "circle",
-              source: "places",
-              filter: ["has", "point_count"],
-              paint: {
-                "circle-color": "#176750",
-                "circle-radius": 22,
-                "circle-stroke-width": 5,
-                "circle-stroke-color": "#ffffff",
-                "circle-stroke-opacity": 0.8,
+              clusterRadius: 58,
+              clusterProperties: {
+                foodCount: ["+", ["case", ["==", ["get", "category"], "Food"], 1, 0]],
+                placesCount: ["+", ["case", ["==", ["get", "category"], "Places"], 1, 0]],
+                natureCount: ["+", ["case", ["==", ["get", "category"], "Nature"], 1, 0]],
+                shoppingCount: ["+", ["case", ["==", ["get", "category"], "Shopping"], 1, 0]],
+                funCount: ["+", ["case", ["==", ["get", "category"], "Fun & Activities"], 1, 0]],
               },
             });
+
+            // For two nearby places show two overlapping icons; for 3+
+            // show three. These are canvas/WebGL symbols, not laggy HTML markers.
             instance.addLayer({
-              id: "cluster-count",
+              id: "cluster-icon-left",
               type: "symbol",
               source: "places",
               filter: ["has", "point_count"],
               layout: {
-                "text-field": ["get", "point_count_abbreviated"],
-                "text-font": ["Noto Sans Bold"],
-                "text-size": 13,
+                "icon-image": [
+                  "case",
+                  [">", ["get", "foodCount"], 0], "food",
+                  [">", ["get", "placesCount"], 0], "places",
+                  [">", ["get", "natureCount"], 0], "nature",
+                  [">", ["get", "shoppingCount"], 0], "shopping",
+                  "fun",
+                ],
+                "icon-size": 0.73,
+                "icon-offset": [-15, 4],
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": false,
               },
-              paint: { "text-color": "#ffffff" },
+            });
+            instance.addLayer({
+              id: "cluster-icon-middle",
+              type: "symbol",
+              source: "places",
+              filter: ["has", "point_count"],
+              layout: {
+                "icon-image": [
+                  "case",
+                  [">", ["get", "placesCount"], 0], "places",
+                  [">", ["get", "natureCount"], 0], "nature",
+                  [">", ["get", "foodCount"], 0], "food",
+                  [">", ["get", "funCount"], 0], "fun",
+                  "shopping",
+                ],
+                "icon-size": 0.82,
+                "icon-offset": [10, -3],
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": false,
+              },
+            });
+            instance.addLayer({
+              id: "cluster-icon-right",
+              type: "symbol",
+              source: "places",
+              filter: ["all", ["has", "point_count"], [">=", ["get", "point_count"], 3]],
+              layout: {
+                "icon-image": [
+                  "case",
+                  [">", ["get", "natureCount"], 0], "nature",
+                  [">", ["get", "shoppingCount"], 0], "shopping",
+                  [">", ["get", "funCount"], 0], "fun",
+                  [">", ["get", "foodCount"], 0], "food",
+                  "places",
+                ],
+                "icon-size": 0.73,
+                "icon-offset": [26, 6],
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": false,
+              },
             });
             instance.addLayer({
               id: "place-icons",
@@ -167,22 +212,20 @@ export default function CityMap(props: Props) {
               layout: {
                 "icon-image": ["get", "icon"],
                 "icon-size": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  10,
-                  0.8,
-                  16,
-                  1.25,
+                  "interpolate", ["linear"], ["zoom"],
+                  10, 0.82,
+                  13, 0.98,
+                  16, 1.12,
                 ],
                 "icon-allow-overlap": false,
-                "text-field": ["step", ["zoom"], "", 12, ["get", "name"]],
+                "icon-ignore-placement": false,
+                "text-field": ["step", ["zoom"], "", 13, ["get", "name"]],
                 "text-font": ["Noto Sans Bold"],
                 "text-size": 11,
-                "text-offset": [0, 2.4],
+                "text-offset": [0, 1.9],
                 "text-anchor": "top",
                 "text-optional": true,
-                "text-max-width": 12,
+                "text-max-width": 11,
               },
               paint: {
                 "text-color": "#24493c",
@@ -196,7 +239,7 @@ export default function CityMap(props: Props) {
               const place = latest.current.places.find((p) => p.id === id);
               if (place) latest.current.onSelect(place);
             });
-            instance.on("click", "clusters", async (e) => {
+            const zoomCluster = async (e: maplibregl.MapLayerMouseEvent) => {
               if (latest.current.picking || !instance) return;
               const f = e.features?.[0];
               if (!f || f.geometry.type !== "Point") return;
@@ -207,8 +250,17 @@ export default function CityMap(props: Props) {
                 center: f.geometry.coordinates as [number, number],
                 zoom,
               });
-            });
-            for (const id of ["place-icons", "clusters"]) {
+            };
+            const interactiveLayers = [
+              "place-icons",
+              "cluster-icon-left",
+              "cluster-icon-middle",
+              "cluster-icon-right",
+            ];
+            for (const id of interactiveLayers.slice(1)) {
+              instance.on("click", id, zoomCluster);
+            }
+            for (const id of interactiveLayers) {
               instance.on("mouseenter", id, () => {
                 if (instance) instance.getCanvas().style.cursor = "pointer";
               });
@@ -240,20 +292,6 @@ export default function CityMap(props: Props) {
             instance.on("moveend", bounds);
             bounds();
             setReady(true);
-            let modelRequested = false;
-            instance.on("moveend", () => {
-              if (!instance || modelRequested || instance.getZoom() < 16)
-                return;
-              modelRequested = true;
-              import("../layers/landmark")
-                .then(({ landmarkLayer }) => {
-                  if (!disposed && instance)
-                    instance.addLayer(landmarkLayer(), "place-icons");
-                })
-                .catch(() => {
-                  modelRequested = false;
-                });
-            });
           } catch {
             setError("Map icons could not load. Please retry.");
           }
@@ -270,8 +308,6 @@ export default function CityMap(props: Props) {
       abort.abort();
       resizeObserver?.disconnect();
       pickMarker.current?.remove();
-      for (const marker of illustratedMarkers.current) marker.remove();
-      illustratedMarkers.current = [];
       instance?.remove();
       map.current = null;
     };
@@ -290,42 +326,11 @@ export default function CityMap(props: Props) {
           id: p.id,
           name: p.name,
           icon: iconFor(p.category, p.dish),
+          category: p.category,
         },
       })),
     });
   }, [props.places, ready]);
-  // Original miniature-style illustrated landmarks. Smaller POIs retain
-  // efficient MapLibre vector symbols so 100 spots do not flood the DOM.
-  useEffect(() => {
-    for (const marker of illustratedMarkers.current) marker.remove();
-    illustratedMarkers.current = [];
-    const instance = map.current;
-    if (!ready || !instance) return;
-    const art = props.places
-      .filter(isFeaturedPlace)
-      .map((place) => {
-        const element = makeIllustratedMarker(place, (selected) => latest.current.onSelect(selected));
-        const marker = new Marker({ element, anchor: "bottom" })
-          .setLngLat([place.longitude, place.latitude])
-          .addTo(instance);
-        return { marker, element };
-      });
-    illustratedMarkers.current = art.map(({ marker }) => marker);
-    const showAppropriateDetail = () => {
-      const zoom = instance.getZoom();
-      for (const { element } of art) {
-        element.style.display = zoom >= 13.1 || element.dataset.prominent === "yes" ? "" : "none";
-      }
-    };
-    instance.on("zoom", showAppropriateDetail);
-    showAppropriateDetail();
-    return () => {
-      instance.off("zoom", showAppropriateDetail);
-      for (const { marker } of art) marker.remove();
-      illustratedMarkers.current = [];
-    };
-  }, [props.places, ready]);
-
   // Geographic tree points are generated once from OSM green-space polygons.
   // Keep the backdrop independent from food/place category filters.
   useEffect(() => {
