@@ -1,6 +1,17 @@
 import type { Place } from "@/lib/types";
 import { greeneryForPoint, type GreeneryTier } from "./greeneryAssets";
 
+/**
+ * Keep park results in search and the side list, but replace their old
+ * green tree map pins with geographically placed illustrated greenery.
+ * Other Nature places (lakes, etc.) retain their normal location markers.
+ */
+export function isParkPlace(place: Place): boolean {
+  return place.category === "Nature"
+    && /park|garden|forest|woods|botanical|nursery/i.test(place.name)
+    && !/lake|cheruvu|sagar|tank|river|bridge|island/i.test(place.name);
+}
+
 export type DecorationFeature = {
   type: "Feature";
   geometry: { type: "Point"; coordinates: [number, number] };
@@ -42,7 +53,7 @@ export async function loadGeneratedScenery(signal: AbortSignal): Promise<Scenery
       geometry: { type: "Point", coordinates: [lng, lat] },
       properties: { id, ...greeneryForPoint(id) },
     });
-    if (features.length >= 1600) break;
+    if (features.length >= 3200) break;
   }
   return features.length ? { type: "FeatureCollection", features } : null;
 }
@@ -55,11 +66,7 @@ export async function loadGeneratedScenery(signal: AbortSignal): Promise<Scenery
  */
 export function makeCityScenery(places: Place[]): SceneryCollection {
   const features: DecorationFeature[] = [];
-  const parks = places.filter(place =>
-    place.category === "Nature"
-    && /park|garden|forest|woods|botanical|nursery/i.test(place.name)
-    && !/lake|cheruvu|sagar|tank|river|bridge|island/i.test(place.name)
-  );
+  const parks = places.filter(isParkPlace);
 
   for (const place of parks) {
     let seed = 2166136261;
