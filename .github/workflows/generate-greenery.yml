@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/generate-greenery.yml
+      - scripts/generate-map-scenery.mjs
 
 permissions:
   contents: write
@@ -33,12 +34,12 @@ jobs:
           node --input-type=module -e '
             import {readFileSync} from "node:fs";
             const collection=JSON.parse(readFileSync("public/map-data/trees.geojson","utf8"));
-            if(collection.type!=="FeatureCollection" || collection.features.length<30) process.exit(1);
+            if(collection.type!=="FeatureCollection" || collection.features.length<30 || collection.features.length>3200) process.exit(1);
             for(const f of collection.features) {
               const [lng,lat]=f.geometry.coordinates;
-              if(lng<78.15 || lng>78.85 || lat<17.15 || lat>17.65) process.exit(1);
+              if(lng<78.15 || lng>78.85 || lat<17.15 || lat>17.65 || f.properties.placement!=="boundary") process.exit(1);
             }
-            console.log("Geographic vegetation points:",collection.features.length);
+            console.log("Geographic park-boundary greenery points:",collection.features.length);
           '
       - name: Commit generated map scenery
         run: |
@@ -46,7 +47,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/map-data/trees.geojson
           if ! git diff --cached --quiet; then
-            git commit -m "data(map): add geographic Hyderabad scenery"
+            git commit -m "data(map): place illustrated trees along Hyderabad park boundaries"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
