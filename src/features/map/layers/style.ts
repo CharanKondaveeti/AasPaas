@@ -23,12 +23,12 @@ export const AASPAAS_COLORS = {
 } as const;
 
 function safePaint(map: Map, id: string, property: string, value: unknown) {
-  try { map.setPaintProperty(id, property as Parameters<Map["setPaintProperty"]>[1], value); }
+  try { map.setPaintProperty(id, property as Parameters<Map["setPaintProperty"]>[1], value as Parameters<Map["setPaintProperty"]>[2]); }
   catch { /* Different map-style layers may not support every paint property. */ }
 }
 
 function safeLayout(map: Map, id: string, property: string, value: unknown) {
-  try { map.setLayoutProperty(id, property as Parameters<Map["setLayoutProperty"]>[1], value); }
+  try { map.setLayoutProperty(id, property as Parameters<Map["setLayoutProperty"]>[1], value as Parameters<Map["setLayoutProperty"]>[2]); }
   catch { /* Keep optional edits from breaking the geographic map. */ }
 }
 
