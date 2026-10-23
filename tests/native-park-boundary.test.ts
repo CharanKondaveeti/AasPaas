@@ -2,14 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-test("illustrated park boundaries use native polygon-line symbols without DOM markers", () => {
+test("tree placements stay fixed; tile-based repeating park symbols are removed", () => {
   const style = readFileSync("src/features/map/layers/style.ts", "utf8");
   const map = readFileSync("src/features/map/components/CityMap.tsx", "utf8");
-  assert.match(style, /"source-layer": "park"/);
-  assert.match(style, /"symbol-placement": "line"/);
-  assert.match(style, /"symbol-spacing": configuration\.spacing/);
-  assert.match(style, /"icon-rotation-alignment": "viewport"/);
-  assert.match(style, /"icon-image": configuration\.id/);
-  assert.match(map, /addNativeParkBorderTrees\(instance\)/);
-  assert.doesNotMatch(map, /makeIllustratedMarker|tree-sprite-a/);
+  assert.doesNotMatch(style, /addNativeParkBorderTrees|symbol-placement": "line"/);
+  assert.doesNotMatch(map, /addNativeParkBorderTrees|makeIllustratedMarker|tree-sprite-a/);
+  assert.match(map, /source: "aaspaas-scenery"/);
+  assert.match(map, /minzoom: PLACES_REVEAL_ZOOM/);
+  assert.match(style, /"fill-opacity": 0\\.54/);
+  assert.doesNotMatch(style, /"interpolate"[^\\n]*\\["zoom"\\][\\s\\S]*?0\\.72/);
 });
