@@ -53,31 +53,12 @@ export default function CityMap(props: Props) {
           canvasContextAttributes: { antialias: true },
         });
         map.current = instance;
-        let fallbackUsed = false;
-        const useFallback = () => {
-          if (disposed || !instance || fallbackUsed) return;
-          fallbackUsed = true;
-          console.warn("Primary vector map unavailable, loading fallback map.");
-          setReady(false);
-          instance.setStyle({
-            version: 8,
-            sources: {
-              osm: {
-                type: "raster",
-                tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-                tileSize: 256,
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              }
-            },
-            layers: [{ id: "osm-raster", type: "raster", source: "osm" }]
-          });
-        };
+        // Style validation warnings are non-fatal. Do not replace the entire
+        // map with a raster style when a glyph or shield expression warns.
         instance.on("error", (event) => {
           console.error("MapLibre resource error:", event.error);
-          if (!fallbackUsed) useFallback();
-          else setError("Map tiles could not load. Please check your internet connection.");
         });
-        instance.on("style.load", async () => {
+        instance.on("load", async () => {
           if (!instance || disposed) return;
           try {
             const loadedIcons = await Promise.all(
