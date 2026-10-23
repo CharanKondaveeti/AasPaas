@@ -9,6 +9,16 @@ This is the **first automation stage** for matching the illustrated Hyderabad re
 - Existing Supabase places, search, user submissions and moderation.
 - Existing illustrated markers in `src/features/map/layers/illustrations.ts`.
 
+## Park boundary greenery (October 2026 update)
+
+The AasPaas map no longer draws the old generic tree / garden SVG map pins for parks. Park entries remain in the searchable list and can still be opened there; non-park places continue using category icons.
+
+The generator now places **larger, detailed WebP trees near the INSIDE edges of real mapped park polygons** (about 9–20 metres inward, with checked polygon membership and mapped-water exclusion). Eligible parks receive points in round-robin order so very large parks do not monopolize the city-wide limit. Other woodland areas are decorated after parks.
+
+MapLibre draws three GPU symbol layers with progressive visibility around zoom 11–16. No HTML tree markers are used; other place pins appear above them. Parks need a mapped polygon to get boundary trees: the generator currently handles closed OSM ways (not all multipolygon relations, holes or unmapped parks). Any image may extend visually across the polygon edge at lower zoom even though the geographic anchor is inside.
+
+Generation updates are done by `npm run map:scenery` or the GitHub Actions workflow, triggered when the generator script or workflow changes on main. Generated `public/map-data/trees.geojson` is then committed, deploying separately. The existing static file stays available until that run finishes. Map art remains stable between page loads.
+
 ## Generate trees from geographic green areas
 
 Run locally with Node 22+ after `npm install`:
