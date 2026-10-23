@@ -40,7 +40,7 @@ test("greenery icon sizes use MapLibre-compatible top-level zoom expressions", (
   const [section] = source.split("const tierLayers =").slice(1);
   assert.ok(section, "greenery symbol layers should exist");
   const iconSize = section.slice(section.indexOf('"icon-size":'), section.indexOf('"icon-allow-overlap"'));
-  assert.match(iconSize, /"icon-size":\s*\[\s*//);
+  assert.match(iconSize, /"icon-size":\s*\[\s*/);
   assert.match(iconSize, /"interpolate",\s*\["linear"\],\s*\["zoom"\]/);
   assert.doesNotMatch(iconSize, /"icon-size":\s*\[\s*"\*"/);
 });
