@@ -1,4 +1,4 @@
-import type { Map } from "maplibre-gl";
+import type { Map, FillLayerSpecification } from "maplibre-gl";
 
 /**
  * AasPaas keeps real OpenFreeMap geographic data, with an illustrated Galli
@@ -150,3 +150,71 @@ export function applyBushyGreenTexture(map: Map): void {
 }
 
 export const GALLI_BUSH_PATTERN_ID = BUSH_PATTERN_ID;
+
+/**
+ * Draw repeated WebP trees along the boundaries of the basemap's own park
+ * polygons. This works without any external OSM/Overpass request, includes
+ * parks absent from our generated GeoJSON and moves with the GPU map.
+ * Polygon + symbol-placement=line is supported by MapLibre's style spec.
+ */
+export function addNativeParkBorderTrees(map: Map): number {
+  const layers = map.getStyle().layers ?? [];
+  const parkLayer = layers.find((layer): layer is FillLayerSpecification =>
+    layer.type === "fill" && layer["source-layer"] === "park" && !!layer.source
+  );
+  if (!parkLayer || !parkLayer.source) return 0;
+  const labelLayer = layers.find(layer => layer.type === "symbol")?.id;
+  let added = 0;
+  const configurations = [
+    {
+      id: "galli-park-boundary-canopies",
+      minzoom: 12,
+      spacing: 115,
+      sizes: [12, 0.42, 14, 0.70, 16, 1.03],
+    },
+    {
+      id: "galli-park-boundary-shrubs",
+      minzoom: 14,
+      spacing: 250,
+      sizes: [12, 0.24, 14, 0.42, 16, 0.70],
+    },
+  ] as const;
+  for (const configuration of configurations) {
+    if (map.getLayer(configuration.id)) continue;
+    try {
+      map.addLayer({
+        id: configuration.id,
+        type: "symbol",
+        source: parkLayer.source,
+        "source-layer": "park",
+        ...(parkLayer.filter ? { filter: parkLayer.filter } : {}),
+        minzoom: configuration.minzoom,
+        layout: {
+          "symbol-placement": "line",
+          "symbol-spacing": configuration.spacing,
+          "icon-image": configuration.id === "galli-park-boundary-canopies"
+            ? ["match", ["get", "class"],
+                "national_park", "tree-dark-detailed",
+                "nature_reserve", "tree-bright-detailed",
+                "tree-canopy-detailed"]
+            : "bush-dense-detailed",
+          "icon-size": [
+            "interpolate", ["linear"], ["zoom"],
+            configuration.sizes[0], configuration.sizes[1],
+            configuration.sizes[2], configuration.sizes[3],
+            configuration.sizes[4], configuration.sizes[5],
+          ],
+          "icon-rotation-alignment": "viewport",
+          "icon-pitch-alignment": "viewport",
+          "icon-anchor": "bottom",
+          "icon-allow-overlap": false,
+          "icon-ignore-placement": true,
+        },
+      }, labelLayer);
+      added++;
+    } catch (error) {
+      console.warn("Could not apply native park boundary greenery:", error);
+    }
+  }
+  return added;
+}

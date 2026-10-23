@@ -5,7 +5,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Map as LibreMap, GeoJSONSource, Marker } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
-import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, GALLI_BUSH_PATTERN_ID } from "../layers/style";
+import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, addNativeParkBorderTrees, GALLI_BUSH_PATTERN_ID } from "../layers/style";
 import { isParkPlace, loadGeneratedScenery } from "../layers/scenery";
 import { GREENERY_ASSETS, greeneryImagePath } from "../layers/greeneryAssets";
 import { iconNames, iconFor } from "../layers/icons";
@@ -118,6 +118,9 @@ export default function CityMap(props: Props) {
             }
             if (loaded !== GREENERY_ASSETS.length)
               console.warn("Some illustrated park greenery could not load:", loaded);
+            // Repeat WebP trees on actual park polygon outlines, including
+            // parks missing from the separately generated OSM point dataset.
+            addNativeParkBorderTrees(instance);
             instance.addSource("aaspaas-scenery", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
