@@ -66,7 +66,8 @@ export function addIndiaAvailabilityLayers(
 ): MultiPolygon {
   const geometry = data.hyderabad.features[0].geometry as MultiPolygon;
   const firstLabels = map.getStyle().layers.find(layer => layer.type === "symbol")?.id;
-  map.addSource("ghmc-boundary", { type: "geojson", data: data.hyderabad });
+  map.addSource("ghmc-boundary", { type: "geojson", data: data.hyderabad,
+    attribution: "GHMC outline: © OpenStreetMap contributors (2018), Datameet" });
   map.addLayer({
     id: "ghmc-active-city",
     type: "fill",
@@ -94,7 +95,8 @@ export function addIndiaAvailabilityLayers(
     },
   }, firstLabels);
 
-  map.addSource("india-coming-soon", {type:"geojson",data:data.regions});
+  map.addSource("india-coming-soon", {type:"geojson",data:data.regions,
+    attribution: "State/district centres: Open Admin Data (CC BY 4.0)" });
   map.addLayer({
     id: "india-state-availability",
     type: "symbol",
