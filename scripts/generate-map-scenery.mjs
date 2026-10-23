@@ -171,21 +171,65 @@ function options(args){
   return {input:get("--input"),output:get("--output")||"public/map-data/trees.geojson"};
 }
 async function fetchOSM(){
-  const b=[BOUNDS.south,BOUNDS.west,BOUNDS.north,BOUNDS.east].join(",");
-  const query='[out:json][timeout:180];('+
-    'way["leisure"~"^(park|garden|nature_reserve)$"]('+b+');'+
-    'way["landuse"~"^(forest|grass|meadow|recreation_ground)$"]('+b+');'+
-    'way["natural"="wood"]('+b+');'+
-    'way["natural"="water"]('+b+');'+
-    'way["waterway"="riverbank"]('+b+'););out geom;';
-  const response=await fetch(OVERPASS,{
-    method:"POST",
-    headers:{"Content-Type":"application/x-www-form-urlencoded",
-      "User-Agent":"AasPaas-Galli-Map-Generator/1.0 (https://github.com/CharanKondaveeti/AasPaas)"},
-    body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(190000)
-  });
-  if(!response.ok)throw new Error("Overpass returned "+response.status);
-  return response.json();
+  // A city-wide out-geom query occasionally returns HTTP 504 on public
+  // Overpass servers. Four smaller geographic queries are more reliable.
+  const midLat=(BOUNDS.south+BOUNDS.north)/2;
+  const midLng=(BOUNDS.west+BOUNDS.east)/2;
+  const boxes=[
+    [BOUNDS.south,BOUNDS.west,midLat,midLng],
+    [BOUNDS.south,midLng,midLat,BOUNDS.east],
+    [midLat,BOUNDS.west,BOUNDS.north,midLng],
+    [midLat,midLng,BOUNDS.north,BOUNDS.east]
+  ];
+  const endpoints=[...new Set([
+    process.env.GALLI_OVERPASS_URL,
+    "https://overpass.private.coffee/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter"
+  ].filter(Boolean))];
+  const all=new Map();
+  let preferred=0;
+  for(let i=0;i<boxes.length;i++){
+    const b=boxes[i].join(",");
+    // Focus on mapped parks/woods and lake outlines. Broad meadow/grass
+    // queries produce large responses without much benefit to park art.
+    const query='[out:json][timeout:55];('+
+      'way["leisure"~"^(park|garden|nature_reserve)$"]('+b+');'+
+      'way["landuse"~"^(forest|recreation_ground)$"]('+b+');'+
+      'way["natural"~"^(wood|water)$"]('+b+');'+
+      'way["waterway"="riverbank"]('+b+'););out geom;';
+    let result;
+    const failures=[];
+    for(let attempt=0;attempt<endpoints.length;attempt++){
+      const index=(preferred+attempt)%endpoints.length;
+      const url=endpoints[index];
+      try{
+        const response=await fetch(url,{
+          method:"POST",
+          headers:{"Content-Type":"application/x-www-form-urlencoded",
+            "User-Agent":"AasPaas-Galli-Map-Generator/1.0 (https://github.com/CharanKondaveeti/AasPaas)"},
+          body:new URLSearchParams({data:query}),
+          signal:AbortSignal.timeout(70000)
+        });
+        if(!response.ok)throw new Error("HTTP "+response.status);
+        result=await response.json();
+        if(!Array.isArray(result.elements))throw new Error("Invalid OSM response");
+        preferred=index;
+        break;
+      }catch(error){
+        const detail=error instanceof Error?error.message:String(error);
+        failures.push(new URL(url).hostname+": "+detail);
+        console.warn("Park-data region "+(i+1)+": "+failures.at(-1));
+      }
+    }
+    if(!result)throw new Error("Unable to retrieve park polygon region "+(i+1)+": "+failures.join("; "));
+    for(const item of result.elements){
+      if(item.type==="way"&&item.id&&Array.isArray(item.geometry))
+        all.set(item.type+":"+item.id,item);
+    }
+    console.log("Region "+(i+1)+"/"+boxes.length+": "+result.elements.length+" features downloaded");
+  }
+  if(!all.size)throw new Error("No mapped park or water geometry received");
+  return {elements:[...all.values()]};
 }
 async function main(){
   const args=options(process.argv.slice(2));
