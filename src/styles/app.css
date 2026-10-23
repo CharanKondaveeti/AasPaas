@@ -1463,37 +1463,8 @@ textarea {
   .illustrated-pin-label { max-width: 118px; font-size: 9px; padding: 3px 7px 3px 3px; }
   .illustrated-pin-category { width: 22px; height: 22px; margin-right: 4px; font-size: 11px; }
 }
-
-
-/* City-first map: a light blur over Hyderabad until users zoom closer.
-   Pointer events pass through so touch dragging and pinch zoom still work. */
-.explore > .city-map-intro {
-  position: absolute;
-  inset: 76px 0 0;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-  background: rgb(250 250 245 / 13%);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-  transition: opacity 140ms ease-out;
-  will-change: opacity;
-}
-.city-map-intro-title {
-  color: #075b48;
-  font-size: clamp(30px, 4.8vw, 62px);
-  font-weight: 850;
-  letter-spacing: 0.17em;
-  line-height: 1.1;
-  text-shadow: 0 2px 16px #fffefa, 0 0 30px #fffefa;
-  padding-left: 0.17em;
-  user-select: none;
-}
+/* Responsive location context for India-wide exploration. */
 @media (max-width: 700px) {
-  .explore > .city-map-intro { top: 66px; }
-  .city-map-intro-title { font-size: clamp(24px, 7vw, 38px); letter-spacing: 0.10em; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .explore > .city-map-intro { transition: none; }
+  .city-label { font-size: 9px; letter-spacing: 0.5px; }
+  .city-label::before { content: none; }
 }
