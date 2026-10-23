@@ -295,6 +295,15 @@ export default function CityMap(props: Props) {
                 "text-halo-width": 2,
               },
             });
+            // The municipal boundary and availability labels should stay
+            // above decorative scenery but below clickable place icons.
+            for (const id of [
+              "ghmc-boundary-halo", "ghmc-solid-border",
+              "india-state-availability", "india-district-availability",
+              "hyderabad-moving-title",
+            ]) {
+              if (instance.getLayer(id)) instance.moveLayer(id, "cluster-icon-left");
+            }
             instance.on("click", "place-icons", (e) => {
               if (latest.current.picking) return;
               const id = e.features?.[0]?.properties?.id;
