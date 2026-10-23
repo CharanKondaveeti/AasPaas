@@ -26,7 +26,6 @@ export const GREENERY_ASSETS = [
 ] as const;
 
 export type GreeneryId = (typeof GREENERY_ASSETS)[number]["id"];
-export type GreeneryTier = "base" | "park" | "detail";
 const weighted = GREENERY_ASSETS.flatMap(asset => Array.from({ length: asset.weight }, () => asset.id));
 export const greeneryIds = GREENERY_ASSETS.map(asset => asset.id);
 export const greeneryImagePath = (id: GreeneryId) => `/map-art/greens/${id}.webp`;
@@ -38,11 +37,10 @@ export function hashGreenery(value: string): number {
 }
 
 /** Deterministic selection: same tree types and positions on each visit. */
-export function greeneryForPoint(id: string): { sprite: GreeneryId; tier: GreeneryTier; kind: string } {
+export function greeneryForPoint(id: string): { sprite: GreeneryId; kind: string } {
   const hash = hashGreenery(id);
   const sprite = weighted[hash % weighted.length];
   const asset = GREENERY_ASSETS.find(item => item.id === sprite)!;
-  // Only 1/5 of placed trees is prominent in the city-wide view.
-  const tier: GreeneryTier = hash % 5 === 0 ? "base" : hash % 3 === 0 ? "detail" : "park";
-  return { sprite, tier, kind: asset.kind };
+  // Stable asset choice independent of map zoom or user filters.
+  return { sprite, kind: asset.kind };
 }

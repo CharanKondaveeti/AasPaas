@@ -1,5 +1,5 @@
 import type { Place } from "@/lib/types";
-import { greeneryForPoint, type GreeneryTier } from "./greeneryAssets";
+import { greeneryForPoint } from "./greeneryAssets";
 
 /**
  * Keep park results in search and the side list, but replace their old
@@ -18,7 +18,6 @@ export type DecorationFeature = {
   properties: {
     sprite: string;
     id: string;
-    tier: GreeneryTier;
     kind: string;
   };
 };
