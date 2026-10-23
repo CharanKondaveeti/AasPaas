@@ -1,4 +1,4 @@
-import type { Map } from "maplibre-gl";
+import type { Map, FillLayerSpecification } from "maplibre-gl";
 
 /**
  * AasPaas keeps real OpenFreeMap geographic data, with an illustrated Galli
@@ -159,7 +159,7 @@ export const GALLI_BUSH_PATTERN_ID = BUSH_PATTERN_ID;
  */
 export function addNativeParkBorderTrees(map: Map): number {
   const layers = map.getStyle().layers ?? [];
-  const parkLayer = layers.find(layer =>
+  const parkLayer = layers.find((layer): layer is FillLayerSpecification =>
     layer.type === "fill" && layer["source-layer"] === "park" && !!layer.source
   );
   if (!parkLayer || !parkLayer.source) return 0;
@@ -170,17 +170,12 @@ export function addNativeParkBorderTrees(map: Map): number {
       id: "galli-park-boundary-canopies",
       minzoom: 12,
       spacing: 115,
-      sprite: ["match", ["get", "class"],
-        "national_park", "tree-dark-detailed",
-        "nature_reserve", "tree-bright-detailed",
-        "tree-canopy-detailed"],
       sizes: [12, 0.42, 14, 0.70, 16, 1.03],
     },
     {
       id: "galli-park-boundary-shrubs",
       minzoom: 14,
       spacing: 250,
-      sprite: "bush-dense-detailed",
       sizes: [12, 0.24, 14, 0.42, 16, 0.70],
     },
   ] as const;
@@ -197,7 +192,12 @@ export function addNativeParkBorderTrees(map: Map): number {
         layout: {
           "symbol-placement": "line",
           "symbol-spacing": configuration.spacing,
-          "icon-image": configuration.sprite,
+          "icon-image": configuration.id === "galli-park-boundary-canopies"
+            ? ["match", ["get", "class"],
+                "national_park", "tree-dark-detailed",
+                "nature_reserve", "tree-bright-detailed",
+                "tree-canopy-detailed"]
+            : "bush-dense-detailed",
           "icon-size": [
             "interpolate", ["linear"], ["zoom"],
             configuration.sizes[0], configuration.sizes[1],
