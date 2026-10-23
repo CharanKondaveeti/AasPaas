@@ -35,7 +35,7 @@ export default function CityMap(props: Props) {
       try {
         const style = await loadCityStyle(abort.signal);
         if (disposed || !container.current) return;
-        maplibregl.setWorkerUrl("/vendor/maplibre-worker.mjs");
+        // MapLibre uses the Vite-compatible worker bundle.
         instance = new maplibregl.Map({
           container: container.current,
           style,

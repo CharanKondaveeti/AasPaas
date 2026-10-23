@@ -1,5 +1,5 @@
 "use client";
-import dynamic from "next/dynamic";
+import {lazy,Suspense} from "react";
 import { useEffect, useState, useCallback } from "react";
 import {
   Search,
@@ -27,9 +27,7 @@ import { getPlaces } from "@/services/placeService";
 import { iconFor } from "@/features/map/layers/icons";
 import PlaceDetails from "./PlaceDetails";
 import SuggestionForm from "@/features/suggestions/components/SuggestionForm";
-const CityMap = dynamic(() => import("@/features/map/components/CityMap"), {
-  ssr: false,
-});
+const CityMap=lazy(()=>import("@/features/map/components/CityMap"));
 const categoryIcons = [
   Compass,
   Utensils,
@@ -93,7 +91,7 @@ export default function ExplorePage() {
   }
   return (
     <main className="explore">
-      <CityMap
+      <Suspense fallback={<div className="map-loading">Opening Hyderabad…</div>}><CityMap
         places={places}
         selected={selected}
         onSelect={select}
@@ -101,7 +99,7 @@ export default function ExplorePage() {
         picking={picking}
         onPick={setPoint}
         target={target}
-      />
+      /></Suspense>
       <header className="topbar">
         <a className="brand" href="/" aria-label="AasPaas home">
           <span className="brand-mark">

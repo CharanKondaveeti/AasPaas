@@ -1,4 +1,3 @@
-import "server-only";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { db, ApiError } from "./server";

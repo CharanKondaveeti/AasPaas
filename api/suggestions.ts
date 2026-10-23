@@ -1,0 +1,1 @@
+import type {IncomingMessage,ServerResponse} from "node:http";import {run} from "./_handler";import {POST} from "../src/server/routes/suggestions";export default (req:IncomingMessage,res:ServerResponse)=>{if(req.method!=="POST"){res.statusCode=405;res.end();return}return run(req,res,POST)};

@@ -1,0 +1,1 @@
+import type {IncomingMessage,ServerResponse} from "node:http";import {run} from "./_handler";import {GET} from "../src/server/routes/places";export default (req:IncomingMessage,res:ServerResponse)=>{if(req.method!=="GET"){res.statusCode=405;res.end();return}return run(req,res,GET)};
