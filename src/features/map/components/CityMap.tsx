@@ -5,7 +5,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Map as LibreMap, GeoJSONSource, Marker } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
-import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, addNativeParkBorderTrees, GALLI_BUSH_PATTERN_ID } from "../layers/style";
+import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, GALLI_BUSH_PATTERN_ID } from "../layers/style";
 import { isParkPlace, loadGeneratedScenery } from "../layers/scenery";
 import { GREENERY_ASSETS, greeneryImagePath } from "../layers/greeneryAssets";
 import { iconNames, iconFor } from "../layers/icons";
@@ -130,45 +130,35 @@ export default function CityMap(props: Props) {
             }
             if (loaded !== GREENERY_ASSETS.length)
               console.warn("Some illustrated park greenery could not load:", loaded);
-            // Repeat WebP trees on actual park polygon outlines, including
-            // parks missing from the separately generated OSM point dataset.
-            addNativeParkBorderTrees(instance);
+            // Use ONLY the stable, pre-generated park-edge coordinates below.
+            // The previous tile-based repeating-outline sprites were
+            // recalculated at each zoom, making trees appear and disappear.
             instance.addSource("aaspaas-scenery", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
             });
             const firstBasemapLabel = instance.getStyle().layers
               .find(layer => layer.type === "symbol")?.id;
-            const tierLayers = [
-              { id: "galli-greenery-base", tier: "base", minzoom: 11.1, size: [11, 0.37, 13, 0.60, 16, 1.04] },
-              { id: "galli-greenery-park", tier: "park", minzoom: 12.4, size: [11, 0.32, 13, 0.51, 16, 0.94] },
-              { id: "galli-greenery-detail", tier: "detail", minzoom: 14.0, size: [11, 0.29, 13, 0.46, 16, 0.86] },
-            ] as const;
-            for (const layer of tierLayers) {
-              instance.addLayer({
-                id: layer.id,
-                type: "symbol",
-                source: "aaspaas-scenery",
-                filter: ["==", ["get", "tier"], layer.tier],
-                minzoom: layer.minzoom,
-                layout: {
-                  "icon-image": ["get", "sprite"],
-                  // MapLibre requires ["zoom"] to be the direct input
-                  // of a top-level interpolate/step expression. Do not
-                  // wrap that expression in a multiply or match operator.
-                  "icon-size": [
-                    "interpolate", ["linear"], ["zoom"],
-                    layer.size[0], layer.size[1],
-                    layer.size[2], layer.size[3],
-                    layer.size[4], layer.size[5],
-                  ],
-                  "icon-allow-overlap": false,
-                  // Decorative images must not hide important place labels.
-                  "icon-ignore-placement": true,
-                  "icon-anchor": "bottom",
-                },
-              }, firstBasemapLabel);
-            }
+            // All trees and bushes become visible at the SAME Hyderabad
+            // discovery zoom. A single, unfiltered GPU layer gives them
+            // permanent coordinates and fixed screen sizes thereafter.
+            // No zoom-specific tiers, icon fades or tile-edge repetition.
+            instance.addLayer({
+              id: "galli-greenery-base",
+              type: "symbol",
+              source: "aaspaas-scenery",
+              minzoom: PLACES_REVEAL_ZOOM,
+              layout: {
+                "icon-image": ["get", "sprite"],
+                "icon-size": 0.60,
+                "icon-anchor": "bottom",
+                "icon-allow-overlap": true,
+                // Trees are visual decoration, not label-collision blockers.
+                "icon-ignore-placement": true,
+                "icon-rotation-alignment": "viewport",
+                "icon-pitch-alignment": "viewport",
+              },
+            }, firstBasemapLabel);
             // Keep native MapLibre clustering for speed, but render only
             // nearby category symbols; never render a number bubble.
             instance.addSource("places", {
