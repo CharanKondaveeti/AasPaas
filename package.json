@@ -12,7 +12,8 @@
     "postinstall": "node scripts/prepare-map.mjs",
     "map:scenery": "node scripts/generate-map-scenery.mjs",
     "prebuild": "node scripts/prepare-greenery.mjs",
-    "predev": "node scripts/prepare-greenery.mjs"
+    "predev": "node scripts/prepare-greenery.mjs",
+    "pretest": "node scripts/prepare-greenery.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
