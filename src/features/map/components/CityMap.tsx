@@ -32,6 +32,7 @@ export default function CityMap(props: Props) {
     setReady(false);
     setError("");
     let instance: LibreMap | undefined;
+    let resizeObserver: ResizeObserver | undefined;
     (async () => {
       try {
         const style = await loadCityStyle(abort.signal);
@@ -53,6 +54,11 @@ export default function CityMap(props: Props) {
           canvasContextAttributes: { antialias: true },
         });
         map.current = instance;
+        // Keep WebGL size in sync with the actual map container.
+        resizeObserver = new ResizeObserver(() => {
+          if (!disposed && instance) instance.resize();
+        });
+        resizeObserver.observe(container.current);
         // Style validation warnings are non-fatal. Do not replace the entire
         // map with a raster style when a glyph or shield expression warns.
         instance.on("error", (event) => {
@@ -213,6 +219,7 @@ export default function CityMap(props: Props) {
     return () => {
       disposed = true;
       abort.abort();
+      resizeObserver?.disconnect();
       pickMarker.current?.remove();
       instance?.remove();
       map.current = null;

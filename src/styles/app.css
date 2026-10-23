@@ -83,9 +83,14 @@ img {
   overflow: hidden;
   position: relative;
 }
-.map-canvas {
+.explore > .map-canvas {
+  /* MapLibre adds .maplibregl-map { position: relative }.
+     Keep the fullscreen map absolutely positioned even after its CSS loads. */
   position: absolute;
   inset: 76px 0 0;
+  width: 100%;
+  height: calc(100% - 76px);
+  min-height: 0;
   background: #edf0e7;
 }
 .topbar {
@@ -989,8 +994,9 @@ textarea {
   .suggest-top span {
     display: none;
   }
-  .map-canvas {
+  .explore > .map-canvas {
     top: 66px;
+    height: calc(100% - 66px);
   }
   .discovery-toolbar {
     left: 14px;
