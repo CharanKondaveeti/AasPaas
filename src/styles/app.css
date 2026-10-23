@@ -1275,3 +1275,17 @@ textarea {
   .illustrated-pin img { width: 65px; height: 68px; }
   .illustrated-pin-label { font-size: 9px; padding: 5px 8px; max-width: 95px; }
 }
+
+/* Place details slide to the right on desktop, like the illustrated reference. */
+@media (min-width: 701px) {
+  .discovery-panel:has(.place-details) {
+    left: auto;
+    right: 24px;
+    top: 92px;
+    bottom: 20px;
+    width: min(376px, 32vw);
+    height: auto;
+    z-index: 5;
+    border-radius: 22px;
+  }
+}
