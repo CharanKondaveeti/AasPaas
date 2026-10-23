@@ -186,13 +186,13 @@ export default function CityMap(props: Props) {
 
             // At city scale there are no individual or grouped place pins.
             // After zooming closer, icons fade in together.
-            const revealPaint = {
+            const revealPaint: maplibregl.SymbolLayerSpecification["paint"] = {
               "icon-opacity": [
                 "interpolate", ["linear"], ["zoom"],
                 PLACES_REVEAL_ZOOM, 0,
                 PLACES_FULLY_VISIBLE_ZOOM, 1,
               ],
-            } as const;
+            };
 
             // For two nearby places show two overlapping icons; for 3+
             // show three. These are canvas/WebGL symbols, not laggy HTML markers.
