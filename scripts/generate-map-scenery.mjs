@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const BOUNDS = { south: 17.15, west: 78.15, north: 17.65, east: 78.85 };
-const OVERPASS = "https://overpass.kumi.systems/api/interpreter";
+const OVERPASS = process.env.GALLI_OVERPASS_URL || "https://overpass.private.coffee/api/interpreter";
 const SPRITES = ["tree-sprite-a", "tree-sprite-b", "garden-sprite"];
 const MAX_TREES = 1600;
 const round = value => Number(value.toFixed(7));
@@ -125,7 +125,7 @@ async function fetchOSM(){
     'way["natural"="water"]('+b+');' +
     'way["waterway"="riverbank"]('+b+'););out geom;';
   const response=await fetch(OVERPASS,{
-    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded","User-Agent":"AasPaas-Galli-Map-Generator/1.0 (https://github.com/CharanKondaveeti/AasPaas)"},
     body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(190000)
   });
   if(!response.ok) throw new Error("Overpass returned "+response.status);
