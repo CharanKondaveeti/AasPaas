@@ -36,7 +36,7 @@ test("all MapLibre POI symbol layers are hidden until the reveal zoom", () => {
 
 test("the blurred city title remains click-through to support pinch and drag",()=>{
   const style = readFileSync("src/styles/app.css", "utf8");
-  const index = style.lastIndexOf(".explore > .city-map-intro {");
+  const index = style.indexOf(".explore > .city-map-intro {");
   assert.ok(index >= 0);
   assert.match(style.slice(index, index+340), /pointer-events: none/);
   assert.match(style.slice(index, index+340), /backdrop-filter: blur\(3px\)/);
