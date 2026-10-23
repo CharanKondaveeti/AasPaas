@@ -1,24 +1,37 @@
-import type { StyleSpecification } from "maplibre-gl";
+import type { Map } from "maplibre-gl";
 
-/**
- * Stable baseline for city discovery.
- * A plain raster source avoids vector style expression errors and preserves
- * all custom clickable AasPaas place layers on top of the map.
- * For significant public traffic, switch to a tile provider with an
- * appropriate production usage agreement.
- */
-export async function loadCityStyle(_signal?: AbortSignal): Promise<StyleSpecification> {
-  return {
-    version: 8,
-    sources: {
-      osm: {
-        type: "raster",
-        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-        tileSize: 256,
-        maxzoom: 19,
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
-      },
-    },
-    layers: [{ id: "city-base", type: "raster", source: "osm", minzoom: 0 }],
-  };
+/** OpenFreeMap vector tiles and relative resources stay provider-managed. */
+export async function loadCityStyle(_signal?: AbortSignal): Promise<string> {
+  return "https://tiles.openfreemap.org/styles/positron";
+}
+
+/** Adapt the vector basemap into AasPaas's illustrated cream/blue/green palette. */
+export function applyCityPalette(map: Map): void {
+  const style = map.getStyle();
+  for (const layer of style.layers ?? []) {
+    const id = layer.id.toLowerCase();
+    try {
+      if (layer.type === "background") {
+        map.setPaintProperty(layer.id, "background-color", "#f8f7ee");
+      } else if (layer.type === "fill") {
+        if (/water/.test(id)) map.setPaintProperty(layer.id, "fill-color", "#9bdff2");
+        else if (/park|grass|wood|forest|garden|landcover/.test(id)) {
+          map.setPaintProperty(layer.id, "fill-color", "#dceccf");
+          map.setPaintProperty(layer.id, "fill-opacity", 0.85);
+        } else if (/building/.test(id)) {
+          map.setPaintProperty(layer.id, "fill-color", "#e9dfcb");
+          map.setPaintProperty(layer.id, "fill-opacity", 0.45);
+        } else if (/landuse|residential/.test(id)) {
+          map.setPaintProperty(layer.id, "fill-color", "#f4f2e8");
+        }
+      } else if (layer.type === "line") {
+        if (/waterway|river|stream/.test(id)) map.setPaintProperty(layer.id, "line-color", "#8cd3eb");
+        else if (/road|highway|street|bridge|tunnel|motorway/.test(id)) {
+          map.setPaintProperty(layer.id, "line-color", /casing/.test(id) ? "#e1e1d8" : "#ffffff");
+        }
+      }
+    } catch {
+      // A provider-specific layer may not support this optional paint property.
+    }
+  }
 }

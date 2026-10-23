@@ -1205,3 +1205,73 @@ textarea {
     animation: none !important;
   }
 }
+
+/* AasPaas illustrated discovery map: original SVG miniature artwork. */
+.explore > .map-canvas {
+  background: #f8f7ee;
+}
+.illustrated-pin {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  width: 122px;
+  min-height: 103px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  filter: drop-shadow(0 3px 3px #24453625);
+  transition: transform .16s ease;
+  font-family: inherit;
+}
+.illustrated-pin:hover, .illustrated-pin:focus-visible {
+  transform: translateY(-4px) scale(1.06);
+  z-index: 4;
+}
+.illustrated-pin img {
+  display: block;
+  width: 89px;
+  height: 86px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.illustrated-pin-label {
+  position: relative;
+  display: inline-block;
+  margin-top: -10px;
+  padding: 6px 11px;
+  max-width: 135px;
+  border: 1px solid #ebebe1;
+  border-radius: 18px;
+  background: #fffefa;
+  box-shadow: 0 3px 12px #233e3322;
+  color: #254b3b;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.illustrated-pin[data-kind="Food"] .illustrated-pin-label { border-bottom: 3px solid #e9974c; }
+.illustrated-pin[data-kind="Nature"] .illustrated-pin-label { border-bottom: 3px solid #5aa66c; }
+.illustrated-pin[data-kind="Places"] .illustrated-pin-label { border-bottom: 3px solid #a37ad2; }
+.illustrated-pin[data-kind="Shopping"] .illustrated-pin-label { border-bottom: 3px solid #d77b9e; }
+.illustrated-pin[data-kind="Fun & Activities"] .illustrated-pin-label { border-bottom: 3px solid #59b8c7; }
+.place-cover .cover-illustration {
+  display: block;
+  width: 160px;
+  height: 155px;
+  object-fit: contain;
+  margin: 0 auto;
+  filter: drop-shadow(0 12px 11px #204a3324);
+}
+@media (max-width: 700px) {
+  .illustrated-pin { width: 93px; min-height: 77px; }
+  .illustrated-pin img { width: 65px; height: 68px; }
+  .illustrated-pin-label { font-size: 9px; padding: 5px 8px; max-width: 95px; }
+}

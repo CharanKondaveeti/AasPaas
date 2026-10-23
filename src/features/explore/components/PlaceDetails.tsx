@@ -1,6 +1,6 @@
 import { ArrowUpRight, MapPin, Clock, Wallet, X } from "lucide-react";
 import type { Place } from "@/lib/types";
-import { iconFor } from "@/features/map/layers/icons";
+import { illustrationFor } from "@/features/map/layers/illustrations";
 export default function PlaceDetails({
   place,
   onClose,
@@ -26,7 +26,7 @@ export default function PlaceDetails({
           <>
             <img
               className="cover-illustration"
-              src={`/icons/${iconFor(place.category, place.dish)}.svg`}
+              src={illustrationFor(place)}
               alt=""
             />
             <span>Discover Hyderabad</span>

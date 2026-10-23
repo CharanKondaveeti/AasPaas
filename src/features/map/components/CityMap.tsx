@@ -5,7 +5,8 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Map as LibreMap, GeoJSONSource, Marker } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
-import { loadCityStyle } from "../layers/style";
+import { loadCityStyle, applyCityPalette } from "../layers/style";
+import { buildTreeFeatures, isFeaturedPlace, makeIllustratedMarker } from "../layers/illustrations";
 import { iconNames, iconFor } from "../layers/icons";
 type Props = {
   places: Place[];
@@ -20,7 +21,8 @@ export default function CityMap(props: Props) {
   const container = useRef<HTMLDivElement>(null),
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
-    pickMarker = useRef<Marker | null>(null);
+    pickMarker = useRef<Marker | null>(null),
+    illustratedMarkers = useRef<Marker[]>([]);
   latest.current = props;
   const [ready, setReady] = useState(false),
     [error, setError] = useState(""),
@@ -67,6 +69,7 @@ export default function CityMap(props: Props) {
         instance.on("load", async () => {
           if (!instance || disposed) return;
           try {
+            applyCityPalette(instance);
             const loadedIcons = await Promise.all(
               iconNames.map(async (name) => {
                 const image = new Image(80, 80);
@@ -78,6 +81,27 @@ export default function CityMap(props: Props) {
             if (disposed) return;
             for (const { name, image } of loadedIcons)
               instance.addImage(name, image, { pixelRatio: 2 });
+            const treeArt = new Image(128, 128);
+            treeArt.src = "/map-art/tree.svg";
+            await treeArt.decode();
+            if (disposed) return;
+            instance.addImage("aaspaas-tree", treeArt, { pixelRatio: 3 });
+            instance.addSource("decorative-trees", {
+              type: "geojson",
+              data: { type: "FeatureCollection", features: [] },
+            });
+            instance.addLayer({
+              id: "illustrated-trees",
+              type: "symbol",
+              source: "decorative-trees",
+              minzoom: 11,
+              layout: {
+                "icon-image": "aaspaas-tree",
+                "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.44, 15, 0.9],
+                "icon-allow-overlap": false,
+                "icon-ignore-placement": false,
+              },
+            });
             instance.addSource("places", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
@@ -221,6 +245,8 @@ export default function CityMap(props: Props) {
       abort.abort();
       resizeObserver?.disconnect();
       pickMarker.current?.remove();
+      for (const marker of illustratedMarkers.current) marker.remove();
+      illustratedMarkers.current = [];
       instance?.remove();
       map.current = null;
     };
@@ -243,6 +269,44 @@ export default function CityMap(props: Props) {
       })),
     });
   }, [props.places, ready]);
+  // Original miniature-style illustrated landmarks. Smaller POIs retain
+  // efficient MapLibre vector symbols so 100 spots do not flood the DOM.
+  useEffect(() => {
+    for (const marker of illustratedMarkers.current) marker.remove();
+    illustratedMarkers.current = [];
+    const instance = map.current;
+    if (!ready || !instance) return;
+    const art = props.places
+      .filter(isFeaturedPlace)
+      .map((place) => {
+        const element = makeIllustratedMarker(place, (selected) => latest.current.onSelect(selected));
+        const marker = new Marker({ element, anchor: "bottom" })
+          .setLngLat([place.longitude, place.latitude])
+          .addTo(instance);
+        return { marker, element };
+      });
+    illustratedMarkers.current = art.map(({ marker }) => marker);
+    const showAppropriateDetail = () => {
+      const zoom = instance.getZoom();
+      for (const { element } of art) {
+        element.style.display = zoom >= 13.1 || element.dataset.prominent === "yes" ? "" : "none";
+      }
+    };
+    instance.on("zoom", showAppropriateDetail);
+    showAppropriateDetail();
+    return () => {
+      instance.off("zoom", showAppropriateDetail);
+      for (const { marker } of art) marker.remove();
+      illustratedMarkers.current = [];
+    };
+  }, [props.places, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const source = map.current?.getSource("decorative-trees") as GeoJSONSource | undefined;
+    source?.setData(buildTreeFeatures(props.places));
+  }, [props.places, ready]);
+
   useEffect(() => {
     if (props.selected && ready)
       map.current?.flyTo({
