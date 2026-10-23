@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Seamless transparent leafy artwork for real green-space polygons only.
+       Design is decorative, not a representation of surveyed individual plants. -->
+  <defs>
+    <radialGradient id="bush1" cx=".36" cy=".26" r=".85">
+      <stop stop-color="#D8FF8D"/>
+      <stop offset=".48" stop-color="#90DB61"/>
+      <stop offset="1" stop-color="#388B53"/>
+    </radialGradient>
+    <radialGradient id="bush2" cx=".38" cy=".23" r=".8">
+      <stop stop-color="#E3FBA5"/>
+      <stop offset=".48" stop-color="#77D176"/>
+      <stop offset="1" stop-color="#318F6D"/>
+    </radialGradient>
+    <radialGradient id="bush3" cx=".27" cy=".25" r=".86">
+      <stop stop-color="#C9ED7B"/>
+      <stop offset=".58" stop-color="#67BF60"/>
+      <stop offset="1" stop-color="#367A53"/>
+    </radialGradient>
+  </defs>
+  <g opacity=".83">
+    <g transform="translate(19 16)">
+      <ellipse cx="1" cy="8" rx="17" ry="9" fill="#437C57" opacity=".22"/>
+      <ellipse cx="-8" cy="0" rx="10" ry="12" fill="url(#bush3)"/>
+      <ellipse cx="9" cy="2" rx="11" ry="13" fill="url(#bush2)"/>
+      <circle cx="0" cy="-6" r="12" fill="url(#bush1)"/>
+      <path d="M-8-9l6 1m9-5l5 3M-11 0l5 3" stroke="#E6FFAD" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+    </g>
+    <g transform="translate(89 26)">
+      <ellipse cx="2" cy="9" rx="20" ry="8" fill="#39794F" opacity=".20"/>
+      <circle cx="-12" cy="1" r="11" fill="url(#bush2)"/>
+      <ellipse cx="6" cy="-7" rx="13" ry="13" fill="url(#bush1)"/>
+      <ellipse cx="15" cy="4" rx="11" ry="10" fill="url(#bush3)"/>
+      <path d="M-10-5l6-3m11-6l6 4M12 2l5 3" stroke="#EEFFBC" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+    </g>
+    <g transform="translate(52 74)">
+      <ellipse cx="0" cy="11" rx="22" ry="9" fill="#2D8857" opacity=".17"/>
+      <ellipse cx="-11" cy="1" rx="14" ry="11" fill="url(#bush3)"/>
+      <circle cx="5" cy="-7" r="13" fill="url(#bush1)"/>
+      <circle cx="13" cy="6" r="11" fill="url(#bush2)"/>
+      <path d="M-13-6l5-4M0-12l5 2M10 0l5-2" stroke="#E7FF9E" stroke-width="2" stroke-linecap="round" opacity=".84"/>
+    </g>
+    <g transform="translate(108 104)">
+      <ellipse cx="-1" cy="6" rx="16" ry="8" fill="#357A4C" opacity=".18"/>
+      <circle cx="-7" cy="-2" r="10" fill="url(#bush2)"/>
+      <circle cx="8" cy="0" r="11" fill="url(#bush1)"/>
+      <circle cx="1" cy="-8" r="9" fill="url(#bush3)"/>
+    </g>
+    <g transform="translate(13 111)">
+      <ellipse cx="0" cy="1" rx="13" ry="8" fill="url(#bush3)"/>
+      <ellipse cx="8" cy="-4" rx="9" ry="10" fill="url(#bush2)"/>
+    </g>
+  </g>
+  <g fill="#4B9A62" opacity=".45">
+    <ellipse cx="48" cy="16" rx="3" ry="5" transform="rotate(34 48 16)"/>
+    <ellipse cx="61" cy="33" rx="4" ry="3" transform="rotate(-20 61 33)"/>
+    <ellipse cx="15" cy="64" rx="5" ry="3" transform="rotate(-31 15 64)"/>
+    <ellipse cx="93" cy="72" rx="5" ry="3" transform="rotate(31 93 72)"/>
+    <ellipse cx="33" cy="105" rx="4" ry="3"/>
+    <ellipse cx="70" cy="113" rx="3" ry="5" transform="rotate(40 70 113)"/>
+  </g>
+  <g fill="#E2F994" opacity=".7">
+    <circle cx="64" cy="27" r="2"/>
+    <circle cx="23" cy="66" r="2"/>
+    <circle cx="79" cy="82" r="2"/>
+    <circle cx="73" cy="119" r="2"/>
+  </g>
+</svg>
