@@ -9,7 +9,9 @@ import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, addNativeParkB
 import { isParkPlace, loadGeneratedScenery } from "../layers/scenery";
 import { GREENERY_ASSETS, greeneryImagePath } from "../layers/greeneryAssets";
 import { iconNames, iconFor } from "../layers/icons";
-import { INITIAL_CITY_ZOOM, PLACES_REVEAL_ZOOM, PLACES_FULLY_VISIBLE_ZOOM, cityIntroOpacity } from "../layers/discoveryZoom";
+import { PLACES_REVEAL_ZOOM, PLACES_FULLY_VISIBLE_ZOOM } from "../layers/discoveryZoom";
+import { addIndiaAvailabilityLayers, containsHyderabad, loadIndiaRegions, INDIA_MIN_ZOOM, INDIA_VIEW_BOUNDS, HYDERABAD_OVERVIEW_ZOOM } from "../layers/indiaRegions";
+import type { MultiPolygon } from "geojson";
 type Props = {
   places: Place[];
   selected: Place | null;
@@ -18,10 +20,10 @@ type Props = {
   picking: boolean;
   onPick: (p: [number, number]) => void;
   target: [number, number] | null;
+  onRegionAvailability?: (available: boolean) => void;
 };
 export default function CityMap(props: Props) {
   const container = useRef<HTMLDivElement>(null),
-    cityIntro = useRef<HTMLDivElement>(null),
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     pickMarker = useRef<Marker | null>(null),
@@ -39,6 +41,8 @@ export default function CityMap(props: Props) {
     generatedScenery.current = false;
     let instance: LibreMap | undefined;
     let resizeObserver: ResizeObserver | undefined;
+    let cityBoundary: MultiPolygon | null = null;
+    let lastAvailability: boolean | null = null;
     (async () => {
       try {
         const style = await loadCityStyle(abort.signal);
@@ -49,25 +53,15 @@ export default function CityMap(props: Props) {
           container: container.current,
           style,
           center: CITY_CENTER,
-          zoom: INITIAL_CITY_ZOOM,
-          minZoom: 9,
+          zoom: HYDERABAD_OVERVIEW_ZOOM,
+          minZoom: INDIA_MIN_ZOOM,
           maxZoom: 19,
           attributionControl: { compact: true },
-          maxBounds: [
-            [77.9, 16.9],
-            [79.1, 17.9],
-          ],
+          // No Hyderabad-only camera limits: visitors may explore all India.
+          renderWorldCopies: false,
           canvasContextAttributes: { antialias: true },
         });
         map.current = instance;
-        // Update a single overlay element instead of rerendering React while
-        // zooming. The overlay never intercepts mouse or touch interactions.
-        const syncCityIntro = () => {
-          if (!instance || !cityIntro.current) return;
-          cityIntro.current.style.opacity = String(cityIntroOpacity(instance.getZoom()));
-        };
-        instance.on("zoom", syncCityIntro);
-        syncCityIntro();
         // Keep WebGL size in sync with the actual map container.
         resizeObserver = new ResizeObserver(() => {
           if (!disposed && instance) instance.resize();
@@ -82,6 +76,14 @@ export default function CityMap(props: Props) {
           if (!instance || disposed) return;
           try {
             applyCityPalette(instance);
+            // Geographic outline and labels are GPU-drawn and track the map.
+            try {
+              const regions = await loadIndiaRegions(abort.signal);
+              if (disposed) return;
+              cityBoundary = addIndiaAvailabilityLayers(instance, regions);
+            } catch (error) {
+              console.warn("Geographic launch boundary unavailable:", error);
+            }
             // Leafy greenery is drawn by MapLibre inside the original park
             // polygons; unlike DOM artwork, it stays aligned during dragging.
             try {
@@ -293,6 +295,15 @@ export default function CityMap(props: Props) {
                 "text-halo-width": 2,
               },
             });
+            // The municipal boundary and availability labels should stay
+            // above decorative scenery but below clickable place icons.
+            for (const id of [
+              "ghmc-boundary-halo", "ghmc-solid-border",
+              "india-state-availability", "india-district-availability",
+              "hyderabad-moving-title",
+            ]) {
+              if (instance.getLayer(id)) instance.moveLayer(id, "cluster-icon-left");
+            }
             instance.on("click", "place-icons", (e) => {
               if (latest.current.picking) return;
               const id = e.features?.[0]?.properties?.id;
@@ -348,6 +359,14 @@ export default function CityMap(props: Props) {
                 b.getEast(),
                 b.getNorth(),
               ]);
+              if (cityBoundary) {
+                const c = instance.getCenter();
+                const available = containsHyderabad([c.lng, c.lat], cityBoundary);
+                if (available !== lastAvailability) {
+                  lastAvailability = available;
+                  latest.current.onRegionAvailability?.(available);
+                }
+              }
             };
             instance.on("moveend", bounds);
             bounds();
@@ -441,10 +460,9 @@ export default function CityMap(props: Props) {
     navigator.geolocation.getCurrentPosition(
       (p) => {
         const { longitude: lng, latitude: lat } = p.coords;
-        if (lng < 77.9 || lng > 79.1 || lat < 16.9 || lat > 17.9) {
-          setError(
-            "You are outside Hyderabad. Explore the city with search instead.",
-          );
+        if (lng < INDIA_VIEW_BOUNDS[0][0] || lng > INDIA_VIEW_BOUNDS[1][0]
+          || lat < INDIA_VIEW_BOUNDS[0][1] || lat > INDIA_VIEW_BOUNDS[1][1]) {
+          setError("Location is outside the supported India map.");
           return;
         }
         map.current?.flyTo({ center: [lng, lat], zoom: 15 });
@@ -467,14 +485,6 @@ export default function CityMap(props: Props) {
         className="map-canvas"
         aria-label="Interactive Hyderabad map"
       />
-      <div
-        ref={cityIntro}
-        className="city-map-intro"
-        style={{ opacity: cityIntroOpacity(INITIAL_CITY_ZOOM) }}
-        aria-hidden="true"
-      >
-        <span className="city-map-intro-title">HYDERABAD</span>
-      </div>
       {!ready && !error && (
         <div className="map-loading">Opening Hyderabad…</div>
       )}
@@ -521,7 +531,7 @@ export default function CityMap(props: Props) {
           onClick={() =>
             map.current?.flyTo({
               center: CITY_CENTER,
-              zoom: INITIAL_CITY_ZOOM,
+              zoom: HYDERABAD_OVERVIEW_ZOOM,
               pitch: 0,
               bearing: 0,
             })
