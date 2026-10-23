@@ -13,13 +13,13 @@ test("WebP scenery catalogue has 19 distinct transparent sprite paths", () => {
   }
 });
 
-test("scenery types and zoom tiers are stable", () => {
+test("greenery identities and asset choices never change with zoom", () => {
   for (let i=0;i<500;i++) {
     const id = "openstreetmap-tree-" + i;
     const one = greeneryForPoint(id);
     assert.deepEqual(one, greeneryForPoint(id));
     assert.ok(GREENERY_ASSETS.some(asset => asset.id === one.sprite));
-    assert.ok(["base", "park", "detail"].includes(one.tier));
+    assert.equal("tier" in one, false, "no staged zoom tiers in tree data");
   }
   const used = new Set(Array.from({length:500}, (_,i) => greeneryForPoint("green"+i).sprite));
   assert.ok(used.size > 12, "many greenery assets should be reused");
@@ -35,14 +35,17 @@ test("all 19 shipped WebP sprites are generated correctly and contain WebP heade
   }
 });
 
-test("greenery icon sizes use MapLibre-compatible top-level zoom expressions", () => {
+test("every tree uses a single permanent native MapLibre layer", () => {
   const source = readFileSync(resolve("src/features/map/components/CityMap.tsx"), "utf8");
-  const [section] = source.split("const tierLayers =").slice(1);
-  assert.ok(section, "greenery symbol layers should exist");
-  const iconSize = section.slice(section.indexOf('"icon-size":'), section.indexOf('"icon-allow-overlap"'));
-  assert.match(iconSize, /"icon-size":\s*\[\s*/);
-  assert.match(iconSize, /"interpolate",\s*\["linear"\],\s*\["zoom"\]/);
-  assert.doesNotMatch(iconSize, /"icon-size":\s*\[\s*"\*"/);
+  const i = source.indexOf('id: "galli-greenery-base"');
+  assert.ok(i >= 0, "scenery layer exists");
+  const section = source.slice(i, source.indexOf("// Keep native MapLibre clustering", i));
+  assert.match(section, /minzoom: PLACES_REVEAL_ZOOM/);
+  assert.match(section, /"icon-size": 0\\.60/);
+  assert.match(section, /"icon-allow-overlap": true/);
+  assert.match(section, /"icon-ignore-placement": true/);
+  assert.doesNotMatch(section, /"interpolate"|\\["zoom"\\]|filter:|maxzoom:|"icon-opacity"/);
+  assert.doesNotMatch(source, /addNativeParkBorderTrees\\(instance\\)|id: "galli-greenery-(park|detail)"/);
 });
 
 test("generated OSM vegetation data is published with valid city coordinates", () => {
