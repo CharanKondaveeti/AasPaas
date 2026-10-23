@@ -5,7 +5,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Map as LibreMap, GeoJSONSource, Marker } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
-import { loadCityStyle, applyCityPalette } from "../layers/style";
+import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, GALLI_BUSH_PATTERN_ID } from "../layers/style";
 import { makeCityScenery, loadGeneratedScenery } from "../layers/scenery";
 import { iconNames, iconFor } from "../layers/icons";
 type Props = {
@@ -71,6 +71,20 @@ export default function CityMap(props: Props) {
           if (!instance || disposed) return;
           try {
             applyCityPalette(instance);
+            // Leafy greenery is drawn by MapLibre inside the original park
+            // polygons; unlike DOM artwork, it stays aligned during dragging.
+            try {
+              const bushTexture = new Image(128, 128);
+              bushTexture.src = "/map-art/bushy-green-pattern.svg";
+              await bushTexture.decode();
+              if (disposed) return;
+              instance.addImage(GALLI_BUSH_PATTERN_ID, bushTexture, { pixelRatio: 1 });
+              applyBushyGreenTexture(instance);
+            } catch (reason) {
+              // If the decorative texture fails to load, solid green parks
+              // remain visible and all map controls and POIs still function.
+              console.warn("Bush texture unavailable; using green fills:", reason);
+            }
             const loadedIcons = await Promise.all(
               iconNames.map(async (name) => {
                 const image = new Image(80, 80);
