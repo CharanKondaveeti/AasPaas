@@ -20,6 +20,7 @@ import {
   categories,
   dishes,
   CITY_BOUNDS,
+  CITY_CENTER,
   type Bounds,
   type Place,
 } from "@/lib/types";
@@ -39,6 +40,7 @@ const categoryIcons = [
 export default function ExplorePage() {
   const [bounds, setBounds] = useState<Bounds>(CITY_BOUNDS),
     [query, setQuery] = useState(""),
+    [cityAvailable, setCityAvailable] = useState(true),
     [category, setCategory] = useState("All"),
     [dish, setDish] = useState(""),
     [places, setPlaces] = useState<Place[]>([]),
@@ -96,6 +98,7 @@ export default function ExplorePage() {
         selected={selected}
         onSelect={select}
         onBounds={updateBounds}
+        onRegionAvailability={setCityAvailable}
         picking={picking}
         onPick={setPoint}
         target={target}
@@ -111,7 +114,7 @@ export default function ExplorePage() {
         </a>
         <span className="brand-line" />
         <span className="city-label">
-          HYDERABAD <span>·</span> INDIA
+          {cityAvailable ? "HYDERABAD" : "EXPLORE INDIA"} <span>·</span> INDIA
         </span>
         <span className="topbar-spacer" />
         <span className="tagline">A little closer to your city.</span>
@@ -242,9 +245,11 @@ export default function ExplorePage() {
                   </p>
                   <div className="panel-count">
                     <span className="live-dot" />
-                    {loading
-                      ? "Looking around…"
-                      : `${places.length} places ${query ? "found" : "in this view"}`}
+                    {!cityAvailable && !query
+                      ? "More regions coming soon"
+                      : loading
+                        ? "Looking around…"
+                        : `${places.length} places ${query ? "found" : "in this view"}`}
                     <button
                       onClick={() => setShowList(!showList)}
                       aria-label="Toggle place list"
@@ -271,7 +276,16 @@ export default function ExplorePage() {
                       <ChevronRight size={16} />
                     </button>
                   )}
-                  {error ? (
+                  {!cityAvailable && !query ? (
+                    <div className="empty-state">
+                      <Compass size={28} />
+                      <h3>Coming soon</h3>
+                      <p>Explore India freely. Hyderabad is our first available city.</p>
+                      <button onClick={() => setTarget([...CITY_CENTER])}>
+                        Explore Hyderabad
+                      </button>
+                    </div>
+                  ) : error ? (
                     <div className="empty-state">
                       <p>{error}</p>
                       <button onClick={() => setRetry((v) => v + 1)}>
@@ -343,9 +357,11 @@ export default function ExplorePage() {
               />
             </div>
           )}
-          <div className="map-note">
-            <span className="live-dot" /> A city full of little discoveries
-          </div>
+          {cityAvailable && (
+            <div className="map-note">
+              <span className="live-dot" /> A city full of little discoveries
+            </div>
+          )}
           <button
             className="mobile-list-toggle"
             onClick={() => setShowList(!showList)}
