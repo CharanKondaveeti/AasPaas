@@ -1,6 +1,6 @@
-import { seedPlaces } from "@/features/explore/data/places";
-import { normalizeSearch, parseBounds } from "@/lib/validation";
-import { backendReady, db, failure, ApiError } from "@/lib/server";
+import { seedPlaces } from "../../features/explore/data/places";
+import { normalizeSearch, parseBounds } from "../../lib/validation";
+import { backendReady, db, failure, ApiError } from "../../lib/server";
 export async function GET(request: Request) {
   try {
     const p = new URL(request.url).searchParams;

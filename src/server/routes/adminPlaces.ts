@@ -4,9 +4,9 @@ import {
   checkOrigin,
   readForm,
   ApiError,
-} from "@/lib/server";
-import { editSchema } from "@/lib/validation";
-import { uploadPhoto } from "@/lib/photos";
+} from "../../lib/server";
+import { editSchema } from "../../lib/validation";
+import { uploadPhoto } from "../../lib/photos";
 export async function GET(request: Request) {
   try {
     const client = await requireAdmin(request);
@@ -76,7 +76,7 @@ export async function PATCH(request: Request) {
     return Response.json({ ok: true });
   } catch (error) {
     if (photo) {
-      const { db } = await import("@/lib/server");
+      const { db } = await import("../../lib/server");
       await db().storage.from("place-photos").remove([photo]);
     }
     return failure(error);

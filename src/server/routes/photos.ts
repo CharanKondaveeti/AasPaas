@@ -4,7 +4,7 @@ import {
   requireAdmin,
   failure,
   ApiError,
-} from "@/lib/server";
+} from "../../lib/server";
 export async function GET(request: Request) {
   try {
     if (!backendReady()) throw new ApiError(404, "Photo not found.");

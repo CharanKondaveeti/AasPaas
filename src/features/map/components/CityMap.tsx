@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Map as LibreMap, GeoJSONSource, Marker } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
@@ -35,7 +36,8 @@ export default function CityMap(props: Props) {
       try {
         const style = await loadCityStyle(abort.signal);
         if (disposed || !container.current) return;
-        // MapLibre uses the Vite-compatible worker bundle.
+        // Vite needs the worker URL emitted by its bundler.
+        maplibregl.setWorkerUrl(workerUrl);
         instance = new maplibregl.Map({
           container: container.current,
           style,
@@ -51,11 +53,13 @@ export default function CityMap(props: Props) {
           canvasContextAttributes: { antialias: true },
         });
         map.current = instance;
-        instance.on("error", () =>
+        instance.on("error", (event) => {
+          console.error("MapLibre resource error:", event.error);
+          
           setError(
             "Some map details could not load. Check your connection and retry.",
-          ),
-        );
+          );
+        });
         instance.on("load", async () => {
           if (!instance || disposed) return;
           try {

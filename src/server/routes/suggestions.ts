@@ -1,4 +1,4 @@
-import { suggestionSchema } from "@/lib/validation";
+import { suggestionSchema } from "../../lib/validation";
 import {
   backendReady,
   db,
@@ -7,8 +7,8 @@ import {
   readForm,
   failure,
   ApiError,
-} from "@/lib/server";
-import { uploadPhoto } from "@/lib/photos";
+} from "../../lib/server";
+import { uploadPhoto } from "../../lib/photos";
 export async function POST(request: Request) {
   let photo: string | null = null;
   try {

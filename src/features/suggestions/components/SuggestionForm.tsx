@@ -37,8 +37,10 @@ export default function SuggestionForm({
         method: "POST",
         body: form,
       });
+      if (!response.headers.get("content-type")?.includes("application/json"))
+        throw new Error("Suggestions are temporarily unavailable. Check the backend deployment.");
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      if (!response.ok) throw new Error(data.error || "Suggestion could not be submitted.");
       setDone(true);
       onDraft({});
     } catch (e) {
