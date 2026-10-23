@@ -7,6 +7,7 @@ import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
 import { loadCityStyle, applyCityPalette, applyBushyGreenTexture, GALLI_BUSH_PATTERN_ID } from "../layers/style";
 import { makeCityScenery, loadGeneratedScenery } from "../layers/scenery";
+import { GREENERY_ASSETS, greeneryImagePath } from "../layers/greeneryAssets";
 import { iconNames, iconFor } from "../layers/icons";
 type Props = {
   places: Place[];
@@ -22,7 +23,8 @@ export default function CityMap(props: Props) {
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     pickMarker = useRef<Marker | null>(null),
-    generatedScenery = useRef(false);
+    generatedScenery = useRef(false),
+    knownNaturePlaces = useRef<Place[]>([]);
   latest.current = props;
   const [ready, setReady] = useState(false),
     [error, setError] = useState(""),
@@ -96,28 +98,38 @@ export default function CityMap(props: Props) {
             if (disposed) return;
             for (const { name, image } of loadedIcons)
               instance.addImage(name, image, { pixelRatio: 2 });
-            // MapLibre draws hundreds of little details in one GPU layer.
-            // An unavailable decorative image must not stop the real map.
-            const scenerySprites = [
+            // Use MapLibre's GPU symbol layers rather than HTML overlays:
+            // greenery moves exactly with the map and never causes DOM drag lag.
+            const legacySprites = [
               ["tree-sprite-a", "/map-art/tree.svg"],
               ["tree-sprite-b", "/map-art/tree-alt.svg"],
               ["garden-sprite", "/map-art/garden.svg"],
-              ["wave-sprite", "/map-art/wave.svg"],
             ] as const;
-            const decoded = await Promise.allSettled(
-              scenerySprites.map(async ([key, path]) => {
+            const sceneryImages = await Promise.allSettled([
+              ...GREENERY_ASSETS.map(async asset => {
+                const image = new Image(80, 80);
+                image.src = greeneryImagePath(asset.id);
+                await image.decode();
+                return { id: asset.id as string, image, pixelRatio: 1.2 };
+              }),
+              ...legacySprites.map(async ([id, path]) => {
                 const image = new Image(128, 128);
                 image.src = path;
                 await image.decode();
-                return { key, image };
+                return { id: id as string, image, pixelRatio: 3 };
               }),
-            );
+            ]);
             if (disposed) return;
-            for (const result of decoded) {
+            let webpLoaded = 0;
+            for (const result of sceneryImages) {
               if (result.status === "fulfilled") {
-                const { key, image } = result.value;
-                instance.addImage(key, image, { pixelRatio: 3 });
+                const { id, image, pixelRatio } = result.value;
+                instance.addImage(id, image, { pixelRatio });
+                if (!id.endsWith("-sprite") && !id.startsWith("tree-sprite-")) webpLoaded++;
               }
+            }
+            if (webpLoaded < GREENERY_ASSETS.length) {
+              console.warn("Some greenery WebP images are missing; using available map art.", webpLoaded);
             }
             instance.addSource("aaspaas-scenery", {
               type: "geojson",
@@ -125,20 +137,37 @@ export default function CityMap(props: Props) {
             });
             const firstBasemapLabel = instance.getStyle().layers
               .find(layer => layer.type === "symbol")?.id;
-            instance.addLayer({
-              id: "aaspaas-scenery-symbols",
-              type: "symbol",
-              source: "aaspaas-scenery",
-              minzoom: 11,
-              layout: {
-                "icon-image": ["get", "sprite"],
-                "icon-size": ["interpolate", ["linear"], ["zoom"],
-                  11, 0.43, 13, 0.69, 16, 1.06],
-                "icon-allow-overlap": false,
-                "icon-ignore-placement": false,
-                "icon-anchor": "bottom",
-              },
-            }, firstBasemapLabel);
+            const tierLayers = [
+              { id: "galli-greenery-base", tier: "base", minzoom: 11.2, size: [11, 0.23, 13, 0.34, 16, 0.57] },
+              { id: "galli-greenery-park", tier: "park", minzoom: 12.6, size: [11, 0.20, 13, 0.31, 16, 0.54] },
+              { id: "galli-greenery-detail", tier: "detail", minzoom: 14.3, size: [11, 0.18, 13, 0.28, 16, 0.50] },
+            ] as const;
+            for (const layer of tierLayers) {
+              instance.addLayer({
+                id: layer.id,
+                type: "symbol",
+                source: "aaspaas-scenery",
+                filter: ["==", ["get", "tier"], layer.tier],
+                minzoom: layer.minzoom,
+                layout: {
+                  // If a new asset fails, keep the old tree icon as a fallback.
+                  "icon-image": ["coalesce", ["image", ["get", "sprite"]], ["image", "tree-sprite-a"]],
+                  "icon-size": [
+                    "*",
+                    ["interpolate", ["linear"], ["zoom"],
+                      layer.size[0], layer.size[1],
+                      layer.size[2], layer.size[3],
+                      layer.size[4], layer.size[5]],
+                    ["match", ["get", "kind"],
+                      "bush", 0.78, "hedge", 0.72, "forest", 1.12, 1],
+                  ],
+                  "icon-allow-overlap": false,
+                  // Decorative images must not hide important place labels.
+                  "icon-ignore-placement": true,
+                  "icon-anchor": "bottom",
+                },
+              }, firstBasemapLabel);
+            }
             // Keep native MapLibre clustering for speed, but render only
             // nearby category symbols; never render a number bubble.
             instance.addSource("places", {
@@ -367,9 +396,17 @@ export default function CityMap(props: Props) {
 
   // Existing projects work without the optional generated GeoJSON file.
   useEffect(() => {
+    // Preserve park scenery across Food / Places filters even when the
+    // generated OSM dataset has not been downloaded yet.
+    for (const place of props.places) {
+      if (place.category === "Nature" &&
+          !knownNaturePlaces.current.some(item => item.id === place.id)) {
+        knownNaturePlaces.current.push(place);
+      }
+    }
     if (!ready || generatedScenery.current) return;
     const source = map.current?.getSource("aaspaas-scenery") as GeoJSONSource | undefined;
-    source?.setData(makeCityScenery(props.places));
+    source?.setData(makeCityScenery(knownNaturePlaces.current));
   }, [props.places, ready]);
 
   useEffect(() => {
