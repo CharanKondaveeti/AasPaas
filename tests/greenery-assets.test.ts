@@ -34,3 +34,23 @@ test("all 19 shipped WebP sprites are generated correctly and contain WebP heade
     assert.equal(buffer.toString("ascii", 8, 12), "WEBP");
   }
 });
+
+test("greenery icon sizes use MapLibre-compatible top-level zoom expressions", () => {
+  const source = readFileSync(resolve("src/features/map/components/CityMap.tsx"), "utf8");
+  const [section] = source.split("const tierLayers =").slice(1);
+  assert.ok(section, "greenery symbol layers should exist");
+  const iconSize = section.slice(section.indexOf('"icon-size":'), section.indexOf('"icon-allow-overlap"'));
+  assert.match(iconSize, /"icon-size":\s*\[\s*/);
+  assert.match(iconSize, /"interpolate",\s*\["linear"\],\s*\["zoom"\]/);
+  assert.doesNotMatch(iconSize, /"icon-size":\s*\[\s*"\*"/);
+});
+
+test("generated OSM vegetation data is published with valid city coordinates", () => {
+  const collection = JSON.parse(readFileSync(resolve("public/map-data/trees.geojson"), "utf8"));
+  assert.equal(collection.type, "FeatureCollection");
+  assert.ok(collection.features.length >= 30, "the geographic scenery build must be present");
+  for (const feature of collection.features) {
+    const [lng,lat] = feature.geometry.coordinates;
+    assert.ok(lng >= 78.15 && lng <= 78.85 && lat >= 17.15 && lat <= 17.65);
+  }
+});
