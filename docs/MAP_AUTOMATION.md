@@ -49,6 +49,44 @@ Next design steps:
 
 The database, security policies and existing place-submission process are untouched. No additional API keys are required for the map generator.
 
+
+## Curated illustrated greenery — live integration
+
+The 19 transparent tree, bush, hedge, flowering and forest illustrations from the
+user's ChatGPT Library are included in Git as a small versioned WebP atlas:
+`assets/galli-greenery-atlas.b64`. Git uses text storage for the atlas, not
+an external image service. `scripts/prepare-greenery.mjs` decodes and splits it
+into `public/map-art/greens/*.webp` automatically before `npm test`,
+`npm run dev` and `npm run build`.
+
+The catalogue `src/features/map/layers/greeneryAssets.ts` deterministically picks
+sprites using a fixed hash and visual weights. Actual map placement continues
+to come from the OSM green-area generator (or a small park-specific fallback).
+`CityMap.tsx` registers the individual WebP textures in MapLibre and draws
+three native WebGL layers: base (city zoom), park (medium zoom), and detail
+(close zoom). Tree art cannot take priority over place labels.
+
+**Quality/performance notes:** These are lightweight 80px source cells designed
+for small illustrated map icons, not full-screen images. They are not surveyed
+individual trees. They do not require API keys, HTML markers, or additional
+requests to image hosting services. The original high-resolution PNG artwork is
+kept in the user's Library; this compact atlas is intended for city-scale
+rendering.
+
+### Geographic scenery data
+
+A separate `.github/workflows/generate-greenery.yml` workflow can fetch
+green-space polygons through Overpass, validate the resulting points and commit
+`public/map-data/trees.geojson`. The generator intentionally avoids mapped
+water areas and polygon edges. It does not yet handle relation multipolygons,
+internal roads, or every park's internal footpaths: visual map QA is still
+required. Should the OSM fetch fail, the application falls back to small,
+approximate decorative clusters near named parks; the map itself keeps working.
+
+You can rebuild data manually using `npm run map:scenery` and review the
+generated coordinates before publishing. Do not routinely run large Overpass
+requests at browser runtime.
+
 ## Attribution and safety
 
 OpenStreetMap data: © OpenStreetMap contributors, subject to ODbL. Keep the provider attribution control visible. Check Overpass API usage guidance and avoid frequent full-city regeneration. All generated trees are **decorative illustrations**, not surveyed tree locations.
