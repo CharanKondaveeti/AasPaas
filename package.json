@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/core.test.ts tests/database.test.ts tests/map-scenery.test.mjs tests/greenery-assets.test.ts",
     "postinstall": "node scripts/prepare-map.mjs",
-    "map:scenery": "node scripts/generate-map-scenery.mjs"
+    "map:scenery": "node scripts/generate-map-scenery.mjs",
+    "prebuild": "node scripts/prepare-greenery.mjs",
+    "predev": "node scripts/prepare-greenery.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
