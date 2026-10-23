@@ -9,7 +9,7 @@ test("illustrated park boundaries use native polygon-line symbols without DOM ma
   assert.match(style, /"symbol-placement": "line"/);
   assert.match(style, /"symbol-spacing": configuration\.spacing/);
   assert.match(style, /"icon-rotation-alignment": "viewport"/);
-  assert.match(style, /"icon-image": configuration\.sprite/);
+  assert.match(style, /"icon-image": configuration\.id/);
   assert.match(map, /addNativeParkBorderTrees\(instance\)/);
   assert.doesNotMatch(map, /makeIllustratedMarker|tree-sprite-a/);
 });
