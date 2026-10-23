@@ -40,12 +40,15 @@ test("every tree uses a single permanent native MapLibre layer", () => {
   const i = source.indexOf('id: "galli-greenery-base"');
   assert.ok(i >= 0, "scenery layer exists");
   const section = source.slice(i, source.indexOf("// Keep native MapLibre clustering", i));
-  assert.match(section, /minzoom: PLACES_REVEAL_ZOOM/);
-  assert.match(section, /"icon-size": 0\\.60/);
-  assert.match(section, /"icon-allow-overlap": true/);
-  assert.match(section, /"icon-ignore-placement": true/);
-  assert.doesNotMatch(section, /"interpolate"|\\["zoom"\\]|filter:|maxzoom:|"icon-opacity"/);
-  assert.doesNotMatch(source, /addNativeParkBorderTrees\\(instance\\)|id: "galli-greenery-(park|detail)"/);
+  assert.ok(section.includes("minzoom: PLACES_REVEAL_ZOOM"));
+  assert.ok(section.includes('"icon-size": 0.60'));
+  assert.ok(section.includes('"icon-allow-overlap": true'));
+  assert.ok(section.includes('"icon-ignore-placement": true'));
+  for (const unwanted of ['"interpolate"', '"zoom"', "filter:", "maxzoom:", '"icon-opacity"'])
+    assert.ok(!section.includes(unwanted), "trees must not change with zoom: " + unwanted);
+  assert.ok(!source.includes("addNativeParkBorderTrees(instance)"));
+  assert.ok(!source.includes('id: "galli-greenery-park"'));
+  assert.ok(!source.includes('id: "galli-greenery-detail"'));
 });
 
 test("generated OSM vegetation data is published with valid city coordinates", () => {
