@@ -57,7 +57,8 @@ export default function CityMap(props: Props) {
           minZoom: INDIA_MIN_ZOOM,
           maxZoom: 19,
           attributionControl: { compact: true },
-          maxBounds: INDIA_VIEW_BOUNDS,
+          // No Hyderabad-only camera limits: visitors may explore all India.
+          renderWorldCopies: false,
           canvasContextAttributes: { antialias: true },
         });
         map.current = instance;
