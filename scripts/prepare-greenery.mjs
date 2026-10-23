@@ -17,7 +17,7 @@ const names = [
 ];
 const source = path.resolve("assets/galli-greenery-atlas.b64");
 const target = path.resolve("public/map-art/greens");
-const CELL = 96, COLS = 5;
+const CELL = 80, COLS = 5;
 try {
   const packed = (await readFile(source, "utf8")).replace(/\s+/g, "");
   if (!packed) throw new Error("Missing atlas content");
