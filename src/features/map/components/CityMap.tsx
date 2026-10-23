@@ -6,7 +6,8 @@ import { Map as LibreMap, GeoJSONSource, Marker } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
 import { loadCityStyle, applyCityPalette } from "../layers/style";
-import { buildTreeFeatures, isFeaturedPlace, makeIllustratedMarker } from "../layers/illustrations";
+import { isFeaturedPlace, makeIllustratedMarker } from "../layers/illustrations";
+import { makeCityScenery } from "../layers/scenery";
 import { iconNames, iconFor } from "../layers/icons";
 type Props = {
   places: Place[];
@@ -45,7 +46,7 @@ export default function CityMap(props: Props) {
           container: container.current,
           style,
           center: CITY_CENTER,
-          zoom: 11.8,
+          zoom: 12.05,
           minZoom: 9,
           maxZoom: 19,
           attributionControl: { compact: true },
@@ -81,27 +82,49 @@ export default function CityMap(props: Props) {
             if (disposed) return;
             for (const { name, image } of loadedIcons)
               instance.addImage(name, image, { pixelRatio: 2 });
-            const treeArt = new Image(128, 128);
-            treeArt.src = "/map-art/tree.svg";
-            await treeArt.decode();
+            // MapLibre draws hundreds of little details in one GPU layer.
+            // An unavailable decorative image must not stop the real map.
+            const scenerySprites = [
+              ["tree-sprite-a", "/map-art/tree.svg"],
+              ["tree-sprite-b", "/map-art/tree-alt.svg"],
+              ["garden-sprite", "/map-art/garden.svg"],
+              ["wave-sprite", "/map-art/wave.svg"],
+            ] as const;
+            const decoded = await Promise.allSettled(
+              scenerySprites.map(async ([key, path]) => {
+                const image = new Image(128, 128);
+                image.src = path;
+                await image.decode();
+                return { key, image };
+              }),
+            );
             if (disposed) return;
-            instance.addImage("aaspaas-tree", treeArt, { pixelRatio: 3 });
-            instance.addSource("decorative-trees", {
+            for (const result of decoded) {
+              if (result.status === "fulfilled") {
+                const { key, image } = result.value;
+                instance.addImage(key, image, { pixelRatio: 3 });
+              }
+            }
+            instance.addSource("aaspaas-scenery", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
             });
+            const firstBasemapLabel = instance.getStyle().layers
+              .find(layer => layer.type === "symbol")?.id;
             instance.addLayer({
-              id: "illustrated-trees",
+              id: "aaspaas-scenery-symbols",
               type: "symbol",
-              source: "decorative-trees",
+              source: "aaspaas-scenery",
               minzoom: 11,
               layout: {
-                "icon-image": "aaspaas-tree",
-                "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.44, 15, 0.9],
+                "icon-image": ["get", "sprite"],
+                "icon-size": ["interpolate", ["linear"], ["zoom"],
+                  11, 0.43, 13, 0.69, 16, 1.06],
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
+                "icon-anchor": "bottom",
               },
-            });
+            }, firstBasemapLabel);
             instance.addSource("places", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
@@ -303,8 +326,8 @@ export default function CityMap(props: Props) {
 
   useEffect(() => {
     if (!ready) return;
-    const source = map.current?.getSource("decorative-trees") as GeoJSONSource | undefined;
-    source?.setData(buildTreeFeatures(props.places));
+    const source = map.current?.getSource("aaspaas-scenery") as GeoJSONSource | undefined;
+    source?.setData(makeCityScenery(props.places));
   }, [props.places, ready]);
 
   useEffect(() => {

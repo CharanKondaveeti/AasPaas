@@ -1289,3 +1289,177 @@ textarea {
     border-radius: 22px;
   }
 }
+
+/* ===== AasPaas illustrated Hyderabad map (MapLibre + source artwork) ===== */
+:root {
+  --paper: #f8f7ef;
+  --ink: #173f36;
+  --green: #006c52;
+  --line: #e1e8dd;
+}
+.explore > .map-canvas { background: #f8f6ec; }
+.topbar {
+  top: 8px;
+  left: 12px;
+  right: 12px;
+  width: auto;
+  height: 61px;
+  padding: 0 21px;
+  border: 1px solid #e3e9dd;
+  border-radius: 17px;
+  background: #fffefcf5;
+  box-shadow: 0 3px 20px #1e483020;
+  backdrop-filter: blur(12px);
+}
+.brand { font-size: 27px; letter-spacing: -1.3px; color: #133c32; }
+.brand-mark { background: #006e54; box-shadow: 0 3px 11px #07583b22; }
+.discovery-toolbar { top: 82px; left: 15px; right: 15px; gap: 10px; z-index: 4; }
+.search-box {
+  width: 329px;
+  height: 49px;
+  border-radius: 16px;
+  border-color: #e9e8e1;
+  box-shadow: 0 6px 25px #294a2b16;
+  background: #fffefaee;
+}
+.category-filters {
+  height: 49px;
+  border-radius: 16px;
+  box-shadow: 0 6px 25px #294a2b16;
+  gap: 3px;
+  border-color: #e9e8e1;
+}
+.category-filters button { border-radius: 12px; padding: 10px 13px; }
+.category-filters button.active { background: #d7f3e4; color: #075e49; font-weight: 800; }
+.dish-filters { top: 60px; left: 344px; border-radius: 15px; box-shadow: 0 5px 19px #264b2a1c; }
+.map-controls button {
+  border: 1px solid #e0e6da;
+  border-radius: 12px;
+  background: #fffefa;
+  box-shadow: 0 5px 15px #1c53351b;
+  color: #104d3a;
+}
+.map-controls .control-group { border-radius: 13px; }
+.maplibregl-ctrl-attrib { opacity: .75; font-size: 9px !important; }
+.maplibregl-map .maplibregl-marker { z-index: 1; }
+.maplibregl-map .maplibregl-marker:has(.illustrated-pin:hover),
+.maplibregl-map .maplibregl-marker:has(.illustrated-pin:focus-visible) { z-index: 8; }
+.illustrated-pin {
+  width: 143px;
+  min-height: 117px;
+  gap: 0;
+  filter: drop-shadow(0 6px 7px #28563a29);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.illustrated-pin img { width: 115px; height: 104px; object-fit: contain; }
+.illustrated-pin[data-prominent="yes"] { width: 164px; min-height: 133px; }
+.illustrated-pin[data-prominent="yes"] img { width: 138px; height: 124px; }
+.illustrated-pin-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: -8px;
+  width: max-content;
+  max-width: 166px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid #e5e9e0;
+  border-radius: 24px;
+  background: #fffefa;
+  box-shadow: 0 4px 13px #294a2b28;
+  color: #22372c;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.illustrated-pin-category {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #a17ad0;
+  color: white;
+  font-size: 13px;
+}
+.illustrated-pin[data-kind="Nature"] .illustrated-pin-category { background: #149261; }
+.illustrated-pin[data-kind="Food"] .illustrated-pin-category { background: #e6893d; }
+.illustrated-pin[data-kind="Shopping"] .illustrated-pin-category { background: #d95d96; }
+.illustrated-pin[data-kind="Fun & Activities"] .illustrated-pin-category { background: #31aebe; }
+.illustrated-pin-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.illustrated-pin[data-kind] .illustrated-pin-label { border-bottom: 1px solid #e5e9e0; }
+.illustrated-pin:hover .illustrated-pin-label,
+.illustrated-pin:focus-visible .illustrated-pin-label { outline: 2px solid #00866b; }
+.place-cover {
+  background: radial-gradient(ellipse at 65% 32%, #bbecdd 0%, #a3d6d0 40%, #8ebdba 100%);
+}
+.place-cover.nature-cover { background: radial-gradient(ellipse at center, #d4edb5 0%, #9dd6a6 100%); }
+.place-cover .cover-illustration {
+  height: 168px; width: 172px; margin: 4px auto -4px;
+  filter: drop-shadow(0 11px 8px #31574330);
+}
+.place-details h2 { color: #143e34; font-weight: 800; }
+.directions { background: #006d51; border-radius: 15px; }
+@media (min-width: 901px) {
+  /* Let the illustrated city occupy the screen rather than a large intro card. */
+  .discovery-panel:not(:has(.place-details)) {
+    left: 18px;
+    top: auto;
+    bottom: 20px;
+    width: 294px;
+    height: 265px;
+    max-height: 265px;
+    border-radius: 20px;
+    border-color: #e7ede1;
+    background: #fffefaf4;
+    box-shadow: 0 8px 32px #31553a20;
+  }
+  .discovery-panel:not(:has(.place-details)) .panel-intro { padding: 13px 16px 0; }
+  .discovery-panel:not(:has(.place-details)) .panel-intro .eyebrow,
+  .discovery-panel:not(:has(.place-details)) .panel-intro h1,
+  .discovery-panel:not(:has(.place-details)) .panel-intro > p { display: none; }
+  .discovery-panel:not(:has(.place-details)) .panel-count { margin: 0 0 9px; }
+  .discovery-panel:not(:has(.place-details)) .places-list { min-height: 0; flex: 1; }
+  .discovery-panel:not(:has(.place-details)) .panel-footer { padding: 8px 13px; }
+  .discovery-panel:has(.place-details) {
+    top: 85px;
+    bottom: 16px;
+    left: auto;
+    right: 16px;
+    width: 356px;
+    height: auto;
+    max-height: none;
+    border-radius: 22px;
+    z-index: 7;
+    border-color: #e5eade;
+    box-shadow: 0 12px 40px #1c433b29;
+  }
+  .explore:has(.place-details) .map-controls { right: 390px; }
+}
+@media (min-width: 701px) and (max-width: 900px) {
+  .discovery-toolbar { gap: 9px; }
+  .category-filters { max-width: calc(100% - 345px); overflow-x: auto; }
+}
+@media (max-width: 700px) {
+  .topbar { top: 5px; left: 6px; right: 6px; height: 59px; padding: 0 13px; border-radius: 13px; }
+  .brand { font-size: 23px; }
+  .discovery-toolbar { top: 78px; left: 9px; right: 9px; gap: 7px; }
+  .search-box, .category-filters { width: 100%; height: 47px; }
+  .category-filters { overflow: auto; }
+  .dish-filters { position: relative; left: auto; top: auto; max-width: 100%; }
+  .illustrated-pin { width: 100px; min-height: 86px; }
+  .illustrated-pin img { width: 74px; height: 73px; }
+  .illustrated-pin[data-prominent="yes"] { width: 110px; min-height: 98px; }
+  .illustrated-pin[data-prominent="yes"] img { width: 87px; height: 85px; }
+  .illustrated-pin-label { max-width: 118px; font-size: 9px; padding: 3px 7px 3px 3px; }
+  .illustrated-pin-category { width: 22px; height: 22px; margin-right: 4px; font-size: 11px; }
+}
