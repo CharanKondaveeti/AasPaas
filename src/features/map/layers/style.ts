@@ -10,16 +10,16 @@ export async function loadCityStyle(_signal?: AbortSignal): Promise<string> {
 }
 
 export const AASPAAS_COLORS = {
-  paper: "#f8f6ec",
-  road: "#fffdf7",
-  roadOutline: "#dbdccd",
-  neighborhood: "#f4f1e4",
-  green: "#c9e6ba",
-  deepGreen: "#8ec78d",
-  lake: "#8fd7ee",
-  stream: "#8acfe9",
-  buildings: "#e8ddc8",
-  label: "#4b5d53",
+  paper: "#F4F1E8",
+  road: "#FFFFFF",
+  roadOutline: "#D9D5C9",
+  neighborhood: "#F0EDE4",
+  green: "#D9EAC5",
+  deepGreen: "#80B875",
+  lake: "#5AC8EC",
+  stream: "#88DCEB",
+  buildings: "#F0EBE2",
+  label: "#465449",
 } as const;
 
 function safePaint(map: Map, id: string, property: string, value: unknown) {
@@ -43,16 +43,21 @@ export function applyCityPalette(map: Map): void {
       if (/water|lake|reservoir|river/.test(name)) {
         safePaint(map, id, "fill-color", AASPAAS_COLORS.lake);
         safePaint(map, id, "fill-opacity", 1);
+        safePaint(map, id, "fill-outline-color", "#9CE5F2");
       } else if (/park|grass|forest|wood|garden|cemetery|nature|landcover/.test(name)) {
         safePaint(map, id, "fill-color", AASPAAS_COLORS.green);
         safePaint(map, id, "fill-opacity", 0.9);
       } else if (/building/.test(name)) {
-        safePaint(map, id, "fill-color", AASPAAS_COLORS.buildings);
-        safePaint(map, id, "fill-opacity", 0.52);
+        // Do not display individual city buildings: the illustrated landmarks
+        // become the foreground architecture, like the Galli reference.
+        safeLayout(map, id, "visibility", "none");
       } else if (/landuse|residential|industrial|commercial/.test(name)) {
         safePaint(map, id, "fill-color", AASPAAS_COLORS.neighborhood);
         safePaint(map, id, "fill-opacity", 0.68);
       }
+    }
+    if (layer.type === "fill-extrusion" && /building/.test(name)) {
+      safeLayout(map, id, "visibility", "none");
     }
     if (layer.type === "line") {
       if (/water|river|stream|canal/.test(name)) {
