@@ -66,9 +66,27 @@ export default function ExplorePage() {
   const updateBounds = useCallback((b: Bounds) => setBounds(b), []);
   useEffect(() => {
     const abort = new AbortController();
+    // AasPaas's approved place collection is still Hyderabad-only.
+    // Clamp large India map viewports to the supported city area so the
+    // Supabase spatial RPC is never asked to scan the whole country.
+    const cityBounds: Bounds = [
+      Math.max(bounds[0], CITY_BOUNDS[0]),
+      Math.max(bounds[1], CITY_BOUNDS[1]),
+      Math.min(bounds[2], CITY_BOUNDS[2]),
+      Math.min(bounds[3], CITY_BOUNDS[3]),
+    ];
+    const intersectsCity = cityBounds[0] <= cityBounds[2]
+      && cityBounds[1] <= cityBounds[3];
+    if (!intersectsCity && !query.trim()) {
+      setPlaces([]);
+      setLoading(false);
+      setTruncated(false);
+      setError("");
+      return () => abort.abort();
+    }
     const timer = setTimeout(() => {
       setLoading(true);
-      getPlaces(bounds, query, category, dish, abort.signal)
+      getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, abort.signal)
         .then((data) => {
           setPlaces(data.places);
           setMode(data.mode);
