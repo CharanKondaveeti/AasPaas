@@ -3,7 +3,7 @@ name: Generate illustrated Hyderabad scenery
 on:
   workflow_dispatch:
   push:
-    branches: [feat/galli-webp-greenery]
+    branches: [main]
     paths:
       - .github/workflows/generate-greenery.yml
 
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
-          ref: feat/galli-webp-greenery
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -47,6 +47,6 @@ jobs:
           git add public/map-data/trees.geojson
           if ! git diff --cached --quiet; then
             git commit -m "data(map): add geographic Hyderabad scenery"
-            git pull --rebase origin feat/galli-webp-greenery
-            git push origin HEAD:feat/galli-webp-greenery
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
