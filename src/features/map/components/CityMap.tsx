@@ -7,7 +7,7 @@ import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
 import { loadCityStyle, applyCityPalette } from "../layers/style";
 import { isFeaturedPlace, makeIllustratedMarker } from "../layers/illustrations";
-import { makeCityScenery } from "../layers/scenery";
+import { makeCityScenery, loadGeneratedScenery } from "../layers/scenery";
 import { iconNames, iconFor } from "../layers/icons";
 type Props = {
   places: Place[];
@@ -23,7 +23,8 @@ export default function CityMap(props: Props) {
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     pickMarker = useRef<Marker | null>(null),
-    illustratedMarkers = useRef<Marker[]>([]);
+    illustratedMarkers = useRef<Marker[]>([]),
+    generatedScenery = useRef(false);
   latest.current = props;
   const [ready, setReady] = useState(false),
     [error, setError] = useState(""),
@@ -34,6 +35,7 @@ export default function CityMap(props: Props) {
     let disposed = false;
     setReady(false);
     setError("");
+    generatedScenery.current = false;
     let instance: LibreMap | undefined;
     let resizeObserver: ResizeObserver | undefined;
     (async () => {
@@ -324,8 +326,29 @@ export default function CityMap(props: Props) {
     };
   }, [props.places, ready]);
 
+  // Geographic tree points are generated once from OSM green-space polygons.
+  // Keep the backdrop independent from food/place category filters.
   useEffect(() => {
     if (!ready) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const data = await loadGeneratedScenery(controller.signal);
+        if (controller.signal.aborted || !data) return;
+        const source = map.current?.getSource("aaspaas-scenery") as GeoJSONSource | undefined;
+        source?.setData(data);
+        generatedScenery.current = true;
+      } catch (error) {
+        if (!controller.signal.aborted)
+          console.warn("Using the basic illustrated tree backdrop:", error);
+      }
+    })();
+    return () => controller.abort();
+  }, [ready]);
+
+  // Existing projects work without the optional generated GeoJSON file.
+  useEffect(() => {
+    if (!ready || generatedScenery.current) return;
     const source = map.current?.getSource("aaspaas-scenery") as GeoJSONSource | undefined;
     source?.setData(makeCityScenery(props.places));
   }, [props.places, ready]);
