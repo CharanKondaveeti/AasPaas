@@ -5,9 +5,9 @@
  * One symbol avoids independently colliding text/background/icon layers.
  * It moves smoothly inside WebGL while the map pans and zooms.
  */
-const SCALE = 2;
-const ART_SIZE = 69;
-const PILL_TOP = 65;
+const SCALE = 3;
+const ART_SIZE = 86;
+const PILL_TOP = 76;
 const MAX_TEXT_WIDTH = 187;
 const MIN_PILL_WIDTH = 116;
 const FONT = '700 13px Arial, Helvetica, sans-serif';
@@ -93,6 +93,10 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
   ctx.scale(SCALE, SCALE);
 
   // Food illustration, centered above and slightly overlapping the label.
+  // High-DPI composite: keep the artwork crisp and overlap the white pill
+  // by 10px so the dish sits directly on its label, without a visual gap.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(art, (width - ART_SIZE) / 2, 0, ART_SIZE, ART_SIZE);
 
   const left = (width - pillWidth) / 2;
