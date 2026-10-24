@@ -11,6 +11,7 @@ export const dishes = [
   "Biryani",
   "Punugulu",
   "Samosa",
+  "Mandi",
   "Chaat",
   "Dosa",
   "Vada",
