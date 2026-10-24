@@ -20,7 +20,7 @@ test("map geometry and SVG paths respect the Vite base URL", () => {
   const icons=readFileSync("src/features/map/layers/icons.ts","utf8");
   assert.ok(regions.includes('import.meta.env.BASE_URL}map-data/hyderabad-ghmc.geojson'));
   assert.ok(regions.includes('import.meta.env.BASE_URL}map-data/india-launch-regions.geojson'));
-  assert.ok(icons.includes('import.meta.env.BASE_URL}icons/'));
+  assert.ok(icons.includes('import.meta.env?.BASE_URL ?? "/"'));
   const preview=readFileSync("src/features/explore/components/ExplorePage.tsx","utf8");
   assert.ok(preview.includes('VITE_GITHUB_PAGES === "true"'));
   assert.ok(preview.includes('!githubPagesPreview && showSuggest'));
