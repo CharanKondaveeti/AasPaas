@@ -1592,3 +1592,42 @@ textarea {
  .food-demo-toggle span {font-size:9px;padding:5px 8px;}
  .sample-map-banner {bottom:90px;font-size:11px;}
 }
+
+/* Compact map-first food discovery: one small demo chip, no stacked warnings. */
+.food-quickbar .food-preview-toggle {
+  color:#865409;background:#fff4d9;border:1px solid #dfb56b;
+  box-shadow:0 2px 8px #60441b16;
+}
+.food-quickbar .food-preview-toggle.active {
+  color:#754209;background:#ffe4a8;border-color:#d5a356;
+}
+.food-quickbar .all-foods-chip {font-weight:800;}
+.food-dish-grid .all-foods-tile {background:#f3f8ed;}
+.all-foods-symbol {display:grid;place-items:center;font-size:29px;height:54px;}
+@media (max-width:700px) {
+  .topbar {height:52px;min-height:52px;padding:0 12px;}
+  .brand {font-size:20px;letter-spacing:-.7px;gap:7px;}
+  .brand-mark {height:30px;width:30px;border-radius:10px;}
+  .brand-mark svg {height:18px;width:18px;}
+  .city-label {font-size:8px;letter-spacing:.3px;}
+  .suggest-top {width:37px;min-width:37px;height:37px;justify-content:center;padding:6px;border-radius:50%;}
+  .suggest-top svg {height:17px;width:17px;}
+  .discovery-toolbar {top:64px;left:8px;right:8px;gap:6px;}
+  .search-box {height:41px;min-height:41px;border-radius:12px;padding:0 12px;}
+  .search-box input {font-size:12px;}
+  .category-filters {height:40px;border-radius:12px;padding:3px;gap:3px;}
+  .category-filters button {font-size:10px;padding:8px 10px;border-radius:9px;gap:5px;}
+  .category-filters button svg {width:14px;height:14px;}
+  .food-quickbar {max-width:calc(100vw - 16px);gap:5px;padding:0 0 4px;}
+  .food-quickbar button {min-height:34px;font-size:10.5px;padding:3px 9px;gap:5px;border-radius:17px;}
+  .food-quickbar button img {width:24px;height:24px;}
+  .food-quickbar .food-preview-toggle {padding:4px 8px;}
+  .food-quickbar .food-preview-toggle svg {width:12px;height:12px;}
+  .food-quickbar .food-drawer-trigger {padding:5px 9px;}
+  .map-controls {right:10px;gap:7px;bottom:100px;}
+  .map-controls button {width:39px;height:39px;border-radius:11px;}
+  .map-controls button svg {width:17px;height:17px;}
+  .sample-map-banner {display:none;}
+  .food-filter-sheet .food-dish-grid {grid-template-columns:repeat(4,minmax(0,1fr));}
+  .all-foods-symbol {font-size:24px;height:50px;}
+}

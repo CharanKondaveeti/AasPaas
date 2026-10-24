@@ -56,7 +56,8 @@ test("sample prices, diet, opening hours, and styles are filters, not production
  const searched=getSampleFoodPlaces(CITY_BOUNDS,"Irani Chai",{...emptyFoodFilters,dish:"Tea"},false);
  assert.equal(searched.places.length,30);
  const limited=getSampleFoodPlaces(CITY_BOUNDS,"",emptyFoodFilters,false);
- assert.equal(limited.places.length,90);
+ assert.equal(limited.places.length,180);
+ assert.equal(new Set(limited.places.map(p=>p.dish)).size,20);
  assert.equal(limited.truncated,true);
 });
 test("production place search remains separate and directions are disabled in demo details",()=>{
@@ -69,4 +70,33 @@ test("production place search remains separate and directions are disabled in de
  assert.ok(migration.includes("public.food_demo_places"));
  assert.ok(!migration.includes("insert into public.places"));
  assert.ok(migration.includes("revoke all on public.food_demo_places from anon,authenticated"));
+});
+
+test("All dishes is the default: viewport sampling stays local and balanced",()=>{
+ const localBounds:[number,number,number,number]=[78.45,17.35,78.5,17.4];
+ const all=getSampleFoodPlaces(localBounds,"",emptyFoodFilters,false);
+ assert.ok(all.places.length>0);
+ assert.equal(all.mode,"sample");
+ assert.equal(new Set(all.places.map(p=>p.dish)).size,20);
+ for(const place of all.places){
+   assert.ok(place.longitude>=localBounds[0]&&place.longitude<=localBounds[2]);
+   assert.ok(place.latitude>=localBounds[1]&&place.latitude<=localBounds[3]);
+ }
+ const chosen=getSampleFoodPlaces(localBounds,"",{...emptyFoodFilters,dish:"Punugulu"},false);
+ assert.ok(chosen.places.length>0);
+ assert.ok(chosen.places.every(p=>p.dish==="Punugulu"));
+ const away:[number,number,number,number]=[78.15,17.15,78.20,17.2];
+ assert.equal(getSampleFoodPlaces(away,"",emptyFoodFilters,false).places.length,0);
+ assert.equal(getSampleFoodPlaces(away,"",{...emptyFoodFilters,dish:"Biryani"},false).places.length,0);
+});
+test("mobile layout, zoomed map markers and demo UI avoid oversized overlay",()=>{
+ const page=readFileSync("src/features/explore/components/ExplorePage.tsx","utf8");
+ const filters=readFileSync("src/features/food/components/FoodFilters.tsx","utf8");
+ const map=readFileSync("src/features/map/components/CityMap.tsx","utf8");
+ assert.ok(page.includes('setDish("");setFoodFilters({...emptyFoodFilters});'));
+ assert.ok(filters.includes("All dishes"));
+ assert.ok(filters.includes("Demo · fictional"));
+ assert.ok(!page.includes('className="sample-map-banner"'));
+ assert.ok(map.includes('"icon-size": ["interpolate"'));
+ assert.ok(map.includes('p.is_demo?\`Demo'));
 });

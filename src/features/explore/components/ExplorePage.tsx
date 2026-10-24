@@ -14,7 +14,6 @@ import {
   ShoppingBag,
   Compass,
   Gem,
-  FlaskConical,
 } from "lucide-react";
 import {
   isVerifiedGem,
@@ -64,7 +63,7 @@ export default function ExplorePage() {
     const params=new URLSearchParams(window.location.search);
     if(params.get("demo")==="food"){
       setSampleMode(true);setGroup("food");setCategory("Food");
-      setDish("Biryani");setFoodFilters({...emptyFoodFilters,dish:"Biryani"});
+      setDish("");setFoodFilters({...emptyFoodFilters});
     }
     const q = params.get("q");
     if (q) {
@@ -210,22 +209,20 @@ export default function ExplorePage() {
           </button>
         </nav>
         {group === "food" && (
-          <div className="food-demo-toggle" role="group" aria-label="Sample data preview">
-            <button aria-pressed={sampleMode} className={sampleMode?"active":""} onClick={()=>{
-              const next=!sampleMode;
-              setSampleMode(next);setSelected(null);setQuery("");setHiddenOnly(false);
-              setDish(next?"Biryani":"");
-              setFoodFilters({...emptyFoodFilters,dish:next?"Biryani":""});
+          <FoodFilters
+            sampleMode={sampleMode}
+            onSampleModeChange={(next) => {
+              setSampleMode(next);
+              setSelected(null);
+              setQuery("");
+              setHiddenOnly(false);
+              setDish("");
+              setFoodFilters({...emptyFoodFilters});
               const url=new URL(window.location.href);
               if(next)url.searchParams.set("demo","food");
               else url.searchParams.delete("demo");
               window.history.replaceState(null,"",url.pathname+url.search+url.hash);
-            }}><FlaskConical size={15}/>{sampleMode?"Sample mode ON · 600":"Preview 600 samples"}</button>
-            {sampleMode&&<span>FICTIONAL PLACES · FOR TESTING ONLY</span>}
-          </div>
-        )}
-        {group === "food" && (
-          <FoodFilters
+            }}
             value={{...foodFilters, dish}}
             onChange={(next) => { setDish(next.dish); setFoodFilters(next); setSelected(null); }}
             resultCount={places.length}
@@ -361,8 +358,7 @@ export default function ExplorePage() {
                           setGroup("all");
                           setHiddenOnly(false);
                           setDish("");
-                          setFoodFilters(sampleMode?{...emptyFoodFilters,dish:"Biryani"}:emptyFoodFilters);
-                          if(sampleMode)setDish("Biryani");
+                          setFoodFilters(emptyFoodFilters);
                         }}
                       >
                         Clear filters
@@ -424,7 +420,6 @@ export default function ExplorePage() {
               />
             </div>
           )}
-          {sampleMode&&group==="food"&&<div className="sample-map-banner" role="status">SAMPLE MODE · fictional food locations · not for visiting</div>}
           {cityAvailable && (
             <div className="map-note">
               <span className="live-dot" /> A city full of little discoveries
