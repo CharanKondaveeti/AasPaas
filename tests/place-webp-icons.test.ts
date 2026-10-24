@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { iconNames, iconFor, iconPath } from "../src/features/map/layers/icons.ts";
 
 test("the ten new food illustrations are valid small transparent-capable WebP files", () => {
   assert.equal(iconNames.length, 10);
   assert.equal(new Set(iconNames).size, 10);
-  assert.equal(existsSync("public/icons"), false, "old SVG illustration folder is removed");
+  assert.ok(readdirSync("public/icons", { recursive: true }).every((file) => !String(file).endsWith(".svg")), "old SVG icons have been removed");
   for (const name of iconNames) {
     const data = readFileSync("public" + iconPath(name));
     assert.equal(data.toString("ascii",0,4), "RIFF");
