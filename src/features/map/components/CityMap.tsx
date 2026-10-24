@@ -9,6 +9,7 @@ import { loadCityStyle, applyCityPalette } from "../layers/style";
 import { addIndiaAvailabilityLayers, containsHyderabad, loadIndiaRegions, INDIA_MIN_ZOOM, INDIA_VIEW_BOUNDS, HYDERABAD_OVERVIEW_ZOOM } from "../layers/indiaRegions";
 import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, iconPath } from "../layers/icons";
+import { drawShopMarker, shopMarkerId } from "../layers/shopPillMarker";
 
 /** Only reveal small real-place icons after zooming into Hyderabad. */
 const PLACE_ICON_MIN_ZOOM = 12.8;
@@ -27,6 +28,7 @@ export default function CityMap(props: Props) {
   const container = useRef<HTMLDivElement>(null),
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
+    foodArt = useRef<Map<string, HTMLImageElement>>(new Map()),
     pickMarker = useRef<Marker | null>(null);
   latest.current = props;
   const [ready, setReady] = useState(false),
@@ -83,9 +85,8 @@ export default function CityMap(props: Props) {
             } catch (error) {
               console.warn("Geographic launch boundary unavailable:", error);
             }
-            // Ten miniature WebP food illustrations replace the old SVGs.
-            // Native MapLibre symbols keep each shop name below its icon,
-            // and both follow map dragging with no HTML marker lag.
+            // Food miniatures are composed with white rounded name pills
+            // and orange dots into one native GPU image per shop.
             const loadedIcons = await Promise.allSettled(
               iconNames.map(async (name) => {
                 const image = new Image();
@@ -95,10 +96,11 @@ export default function CityMap(props: Props) {
               }),
             );
             if (disposed) return;
+            foodArt.current.clear();
             for (const result of loadedIcons) {
               if (result.status !== "fulfilled") continue;
               const { name, image } = result.value;
-              if (!instance.hasImage(name)) instance.addImage(name, image, { pixelRatio: 1 });
+              foodArt.current.set(name, image);
             }
             instance.addSource("aaspaas-places", {
               type: "geojson",
@@ -110,29 +112,17 @@ export default function CityMap(props: Props) {
               source: "aaspaas-places",
               minzoom: PLACE_ICON_MIN_ZOOM,
               layout: {
-                // 48px WebP icons appear near 41px on-screen; no zoom resizing.
+                // Each sprite includes the dish, two orange side dots, and
+                // a white capsule with the actual shop name printed inside.
+                // A single symbol avoids separated labels during map drag
+                // and avoids overlapping with other shops.
                 "icon-image": ["get", "icon"],
-                "icon-size": 0.85,
+                "icon-size": 0.88,
                 "icon-anchor": "bottom",
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
                 "icon-rotation-alignment": "viewport",
                 "icon-pitch-alignment": "viewport",
-                // Shop name sits immediately below its dish illustration.
-                "text-field": ["get", "name"],
-                "text-font": ["Noto Sans Bold"],
-                "text-size": 11,
-                "text-max-width": 10,
-                "text-anchor": "top",
-                "text-offset": [0, 0.35],
-                "text-allow-overlap": false,
-                "text-optional": false,
-              },
-              paint: {
-                "text-color": "#163b32",
-                "text-halo-color": "#ffffff",
-                "text-halo-width": 2,
-                "text-halo-blur": 0.25,
               },
             });
             instance.on("click", PLACE_ICON_LAYER, (e) => {
@@ -199,8 +189,8 @@ export default function CityMap(props: Props) {
       map.current = null;
     };
   }, [attempt]);
-  // Keep map symbols synced to the visible Supabase search and filters.
-  // This preserves the existing selection flow and avoids DOM marker lag.
+  // Composite WebP + white label + dots into ONE stable GPU symbol per shop.
+  // Rebuild only for new/edited shops, never during pan or zoom.
   useEffect(() => {
     if (!ready || !map.current) return;
     const source = map.current.getSource("aaspaas-places") as GeoJSONSource | undefined;
@@ -210,9 +200,21 @@ export default function CityMap(props: Props) {
       features: props.places.flatMap((p) => {
         if (!Number.isFinite(p.longitude) || !Number.isFinite(p.latitude)) return [];
         const icon = iconFor(p.category, p.dish, p.name, p.famous_for);
-        // Show only places with a genuinely matching illustrated food asset.
-        // Other categories still work in search, filters and the places list.
+        // Don't show incorrect food art or any old fallback category pins.
         if (!icon) return [];
+        const image = foodArt.current.get(icon);
+        if (!image) return [];
+        const imageId = shopMarkerId(p.id, p.name, icon);
+        if (!map.current!.hasImage(imageId)) {
+          try {
+            map.current!.addImage(imageId, drawShopMarker(image, p.name), {
+              pixelRatio: 2,
+            });
+          } catch (error) {
+            console.warn("Could not render food shop illustration:", error);
+            return [];
+          }
+        }
         return [{
           type: "Feature" as const,
           geometry: {
@@ -222,7 +224,7 @@ export default function CityMap(props: Props) {
           properties: {
             id: p.id,
             name: p.name,
-            icon,
+            icon: imageId,
           },
         }];
       }),
