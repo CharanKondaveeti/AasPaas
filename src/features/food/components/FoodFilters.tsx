@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { SlidersHorizontal, X, Clock, Leaf, Moon, Sunrise, RotateCcw, Check } from "lucide-react";
+import { SlidersHorizontal, X, Clock, Leaf, Moon, Sunrise, RotateCcw, Check, FlaskConical } from "lucide-react";
 import { foodArtwork, foodBudgets, foodCategories, foodStyleFilters } from "../data/foodCatalog";
 import { emptyFoodFilters, type FoodFiltersState } from "../foodService";
 
-export default function FoodFilters({value,onChange,resultCount,loading}:{
+export default function FoodFilters({value,onChange,resultCount,loading,sampleMode,onSampleModeChange}:{
  value:FoodFiltersState;onChange:(value:FoodFiltersState)=>void;resultCount:number;loading:boolean;
+ sampleMode:boolean;onSampleModeChange:(next:boolean)=>void;
 }) {
  const [open,setOpen]=useState(false);
  useEffect(()=>{
@@ -19,6 +20,16 @@ export default function FoodFilters({value,onChange,resultCount,loading}:{
   <div className="food-quickbar" aria-label="Discover by famous dish">
    <button className="food-drawer-trigger" onClick={()=>setOpen(true)} aria-label="All famous food filters">
      <SlidersHorizontal size={16}/> Filters{selected>0&&<b>{selected}</b>}
+   </button>
+   <button className={sampleMode?"food-preview-toggle active":"food-preview-toggle"}
+     aria-pressed={sampleMode}
+     title="Fictional places for testing, not real shops"
+     onClick={()=>onSampleModeChange(!sampleMode)}>
+     <FlaskConical size={14}/>{sampleMode?"Demo · fictional":"Try demo"}
+   </button>
+   <button className={!value.dish?"selected all-foods-chip":"all-foods-chip"}
+      aria-pressed={!value.dish} onClick={()=>onChange({...value,dish:""})}>
+     All dishes
    </button>
    {foodCategories.slice(0,10).map(item=><button key={item.key}
     className={value.dish===item.key?"selected":""} aria-pressed={value.dish===item.key}
@@ -40,6 +51,13 @@ export default function FoodFilters({value,onChange,resultCount,loading}:{
     <div className="food-filter-scroll">
      <h3>Famous dishes</h3>
      <div className="food-dish-grid">
+      <button className={!value.dish?"selected all-foods-tile":"all-foods-tile"}
+        aria-pressed={!value.dish}
+        onClick={()=>onChange({...value,dish:""})}>
+        <span className="all-foods-symbol">🍽️</span>
+        <span>All dishes</span>
+        {!value.dish&&<Check className="food-checked" size={14}/>}
+      </button>
       {foodCategories.map(item=><button key={item.key}
        className={value.dish===item.key?"selected":""} aria-pressed={value.dish===item.key}
        onClick={()=>update("dish",item.key)}>

@@ -118,7 +118,9 @@ export default function CityMap(props: Props) {
                 // A single symbol avoids separated labels during map drag
                 // and avoids overlapping with other shops.
                 "icon-image": ["get", "icon"],
-                "icon-size": 0.88,
+                // Compact markers preserve the map beneath the food art.
+                // Zoom-based sizing keeps nearby labels readable without crowding.
+                "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.48,15,0.58,18,0.68],
                 "icon-anchor": "bottom",
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
@@ -206,14 +208,20 @@ export default function CityMap(props: Props) {
         const gem = isVerifiedGem(p);
         // Dish illustrations stay unchanged; vector pills show niche places
         // without invented food art, ugly buildings or numbered pins.
-        const imageId = icon && image
-          ? (gem ? shopMarkerId(p.id, p.name, icon + "-gem") : shopMarkerId(p.id, p.name, icon))
-          : shopMarkerId(p.id, p.name, "discovery-" + group + "-" + gem);
+        const mapName=p.is_demo?`Demo ${p.dish||"Food"}`:p.name;
+        // Demo pins share one GPU sprite per food type instead of creating
+        // hundreds of identical image textures as the visitor pans the map.
+        // Feature IDs stay unique so tapping a pin still opens its own sample.
+        const imageId = p.is_demo
+          ? shopMarkerId("demo-" + (icon || group), mapName, icon || group)
+          : icon && image
+            ? (gem ? shopMarkerId(p.id, mapName, icon + "-gem") : shopMarkerId(p.id, mapName, icon))
+            : shopMarkerId(p.id, mapName, "discovery-" + group + "-" + gem);
         if (!map.current!.hasImage(imageId)) {
           try {
             const marker = icon && image
-              ? (gem ? drawShopMarker(image, p.name, true) : drawShopMarker(image, p.name))
-              : drawDiscoveryMarker(p.name, group, gem);
+              ? (gem ? drawShopMarker(image, mapName, true) : drawShopMarker(image, mapName))
+              : drawDiscoveryMarker(mapName, group, gem);
             map.current!.addImage(imageId, marker, { pixelRatio: 3 });
           } catch (error) {
             console.warn("Could not render discovery marker:", error);

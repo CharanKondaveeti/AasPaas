@@ -51,14 +51,13 @@ export const sampleFoodPlaces:readonly SampleFoodPlace[]=Object.freeze(createSam
 /** Preview uses these alone; it never combines sample rows with production results. */
 export function getSampleFoodPlaces(
  bounds:Bounds,query:string,filters:FoodFiltersState,hiddenOnly:boolean,
- limit=90,now:Date=new Date()
+ limit=180,now:Date=new Date()
 ):{places:SampleFoodPlace[];mode:"sample";truncated:boolean}{
  const normalized=normalizeSearch(query);
  const rows=hiddenOnly?[]:sampleFoodPlaces.filter(p=>{
-   // A selected dish shows all 30 examples; zooming/panning can still reveal individual map pins.
-   const areaMatch=Boolean(filters.dish||normalized)||
-     (p.longitude>=bounds[0]&&p.longitude<=bounds[2]&&p.latitude>=bounds[1]&&p.latitude<=bounds[3]);
-   if(!areaMatch)return false;
+   // Every filter acts within the visible map. No dish searches outside this area.
+   if(p.longitude<bounds[0]||p.longitude>bounds[2]||
+      p.latitude<bounds[1]||p.latitude>bounds[3])return false;
    if(filters.dish&&p.dish!==filters.dish)return false;
    if(normalized&&!normalizeSearch([p.name,p.area,p.dish,p.famous_for].join(" ")).includes(normalized))return false;
    if(filters.budget!==null&&p.demo_price_inr>filters.budget)return false;
@@ -73,5 +72,29 @@ export function getSampleFoodPlaces(
    }
    return true;
  });
- return {places:rows.slice(0,limit),mode:"sample",truncated:rows.length>limit};
+ // Results in the 600-row fixture are stored category-by-category.
+ // Interleave matching categories so broad views display all types fairly.
+ // Prefer points near the viewport center when capped, never hide entire food types.
+ const centerLng=(bounds[0]+bounds[2])/2,centerLat=(bounds[1]+bounds[3])/2;
+ const distance=(p:SampleFoodPlace)=>(
+  Math.pow((p.longitude-centerLng)*Math.cos(centerLat*Math.PI/180),2)+
+  Math.pow(p.latitude-centerLat,2)
+ );
+ const byDish=foodCategories.map(cat=>
+   rows.filter(p=>p.dish===cat.key).sort((a,b)=>distance(a)-distance(b)));
+ const balanced:SampleFoodPlace[]=[];
+ let position=0;
+ while(balanced.length<Math.min(rows.length,limit)){
+  let added=false;
+  for(const category of byDish){
+   if(category[position]){
+    balanced.push(category[position]);
+    added=true;
+    if(balanced.length>=limit)break;
+   }
+  }
+  if(!added)break;
+  position++;
+ }
+ return {places:balanced,mode:"sample",truncated:rows.length>limit};
 }
