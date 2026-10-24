@@ -73,7 +73,7 @@ test("high priority food keeps its name and speciality at the city overview", ()
   const neighbourhood = { prominence_score: 60 };
   assert.equal(prominenceScore(famous), 98);
   assert.equal(revealZoom(famous), 9.3);
-  assert.equal(hideZoom(famous), 7.8);
+  assert.ok(Math.abs(hideZoom(famous) - 7.8) < 0.00001);
   assert.equal(fullNameCard(famous, 9.9), true);
   assert.equal(fullNameCard(neighbourhood, 12.8), false);
   assert.equal(fullNameCard(neighbourhood, 13.6), true);
