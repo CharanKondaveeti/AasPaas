@@ -49,6 +49,9 @@ export type Place = {
   verification_notes?: string | null;
   created_at?: string;
   /** True for unverified test records stored in the canonical places table. */
+  /** Editorial map visibility priority, 0–100; not a review rating. */
+  prominence_score?: number;
+  prominence_reason?: string | null;
   is_demo?: boolean;
   demo_fixture_id?: string | null;
   demo_price_inr?: number;
