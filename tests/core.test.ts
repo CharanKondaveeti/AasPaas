@@ -93,3 +93,20 @@ test("admin edits reject javascript URLs and invalid categories", () => {
     false,
   );
 });
+
+test("Mandi is a valid Food dish without changing safe admin validation", () => {
+  const data = {
+    ...valid,
+    description: "Arabian-style mandi rice",
+    area: "Attapur",
+    category: "Food",
+    dish: "Mandi",
+    hours: null,
+    price: null,
+    source_url: "https://pistahouse.in/pages/store-locator-1",
+    photo_credit: null,
+    status: "approved",
+  };
+  assert.equal(editSchema.safeParse(data).success, true);
+  assert.equal(editSchema.safeParse({ ...data, dish: "Unknown" }).success, false);
+});
