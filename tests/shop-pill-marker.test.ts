@@ -54,7 +54,7 @@ test("food artwork is high-DPI, cropped, and overlaps the name pill", () => {
   assert.ok(marker.includes("PILL_TOP-ART_SIZE/2+11"));
   assert.ok(marker.includes("ctx.getImageData"));
   assert.ok(marker.includes('ctx.imageSmoothingQuality="high"'));
-  assert.ok(map.includes("pixelRatio: 3"));
+  assert.ok(map.includes("pixelRatio:3"));
 });
 
 test("illustration is painted over the pill, not hidden behind it",()=>{
