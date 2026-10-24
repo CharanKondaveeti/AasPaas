@@ -1,5 +1,6 @@
 import { ArrowUpRight, MapPin, Clock, Wallet, X } from "lucide-react";
 import type { Place } from "@/lib/types";
+import { iconFor, iconPath } from "@/features/map/layers/icons";
 export default function PlaceDetails({
   place,
   onClose,
@@ -26,6 +27,11 @@ export default function PlaceDetails({
         )}
       </div>
       <div className="detail-body">
+        <img
+          className="detail-place-icon"
+          src={iconPath(iconFor(place.category, place.dish))}
+          alt=""
+        />
         <span className="eyebrow">
           {place.category} {place.dish && ` / ${place.dish}`}
         </span>
