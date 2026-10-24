@@ -177,8 +177,8 @@ export function addIndiaAvailabilityLayers(
       "text-padding": 3,
     },
     paint: {
-      "text-color": "#086A4F",
-      "text-halo-color": "#F8FFF9",
+      "text-color": "#307FA1",
+      "text-halo-color": "#F9FDFF",
       "text-halo-width": 2.6,
       "text-opacity": ["interpolate", ["linear"], ["zoom"], 11.5, 1, 12.45, 0],
     },
