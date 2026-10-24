@@ -1,43 +1,62 @@
 import type { Place } from "@/lib/types";
 
-/** All icons are light local SVG illustrations in public/icons. */
+/** New illustrated WebP icons only. All old SVG assets were removed. */
 export const iconNames = [
-  "places",
-  "nature",
-  "shopping",
-  "fun",
-  "biryani",
-  "punugulu",
-  "samosa",
-  "mandi",
-  "chaat",
-  "dosa",
-  "vada",
-  "tea",
-  "sweets",
-  "food",
+  "biryani", "chaat", "chai", "dosa", "idli", "jalebi",
+  "kebab", "pani-puri", "punugulu", "samosa",
 ] as const;
 
-export type PlaceIcon = (typeof iconNames)[number];
-const knownIcons: ReadonlySet<string> = new Set(iconNames);
+export type FoodIllustration = (typeof iconNames)[number];
 
-const categoryIcons: Record<Place["category"], PlaceIcon> = {
-  Places: "places",
-  Nature: "nature",
-  Shopping: "shopping",
-  "Fun & Activities": "fun",
-  Food: "food",
+const aliases: Record<string, FoodIllustration> = {
+  biryani: "biryani",
+  chaat: "chaat",
+  chai: "chai",
+  tea: "chai",
+  dosa: "dosa",
+  idli: "idli",
+  jalebi: "jalebi",
+  jilebi: "jalebi",
+  jilabi: "jalebi",
+  kebab: "kebab",
+  kabab: "kebab",
+  kababs: "kebab",
+  "pani puri": "pani-puri",
+  "pani-puri": "pani-puri",
+  golgappa: "pani-puri",
+  "gol gappa": "pani-puri",
+  punugulu: "punugulu",
+  punukulu: "punugulu",
+  samosa: "samosa",
 };
 
-/** A matching dish takes priority; unknown dishes get their category icon. */
-export function iconFor(category: Place["category"], dish: string | null): PlaceIcon {
-  const candidate = dish?.trim().toLowerCase();
-  return candidate && knownIcons.has(candidate)
-    ? candidate as PlaceIcon
-    : categoryIcons[category];
+/** Only use illustrations when the food actually matches the dish.
+ * Never portray Mandi, generic Sweets, or an unknown business as Biryani.
+ */
+export function iconFor(
+  category: Place["category"],
+  dish: string | null,
+  name = "",
+  famousFor = "",
+): FoodIllustration | null {
+  if (category !== "Food") return null;
+  const matches = (source: string, key: string) => {
+    const words = " " + source.toLowerCase().replace(/[^a-z]+/g, " ") + " ";
+    const term = " " + key.replace(/[^a-z]+/g, " ") + " ";
+    return words.includes(term);
+  };
+  // A tagged food dish takes priority over mentions in the shop name.
+  if (dish) {
+    const dishIcon = aliases[dish.trim().toLowerCase()];
+    if (dishIcon) return dishIcon;
+  }
+  for (const [word, icon] of Object.entries(aliases)) {
+    if (matches(name, word) || matches(famousFor, word)) return icon;
+  }
+  return null;
 }
 
-/** Use one asset path across map symbols, list cards, filters and details. */
-export function iconPath(name: PlaceIcon): string {
-  return `${import.meta.env?.BASE_URL ?? "/"}icons/${name}.svg`;
+/** Vite's base path works on GitHub Pages and on the original domain. */
+export function iconPath(name: FoodIllustration): string {
+  return `${import.meta.env?.BASE_URL ?? "/"}food-illustrations/${name}.webp`;
 }

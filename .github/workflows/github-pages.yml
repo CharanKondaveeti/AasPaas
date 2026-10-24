@@ -47,7 +47,8 @@ jobs:
       - name: Verify GitHub Pages assets
         run: |
           test -f dist/index.html
-          test -f dist/icons/mandi.svg
+          test -f dist/food-illustrations/punugulu.webp
+          test -f dist/food-illustrations/jalebi.webp
           test -f dist/map-data/hyderabad-ghmc.geojson
           grep -q '/AasPaas/assets/' dist/index.html
 
