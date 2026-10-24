@@ -1,187 +1,145 @@
-/**
- * Draws the reference-style miniature food marker as ONE MapLibre image:
- * food illustration, white rounded shop-name pill, and orange side dots.
- *
- * One symbol avoids independently colliding text/background/icon layers.
- * It moves smoothly inside WebGL while the map pans and zooms.
+/** AasPaas illustrated food markers: one MapLibre GPU image per shop.
+ * The dish sits above a compact white card. Shop name and famous dish stay
+ * together while panning; an orange dot anchors the place to the map.
  */
-const SCALE = 3;
-const ART_SIZE = 104;
-const PILL_TOP = 88;
-const MAX_TEXT_WIDTH = 187;
-const MIN_PILL_WIDTH = 116;
-const FONT = '700 13px Arial, Helvetica, sans-serif';
-
-function truncateToWidth(
-  text: string,
-  width: (s: string) => number,
-): string {
-  if (width(text) <= MAX_TEXT_WIDTH) return text;
-  let trimmed = text;
-  while (trimmed.length && width(trimmed + "…") > MAX_TEXT_WIDTH)
-    trimmed = trimmed.slice(0, -1);
-  return trimmed.trimEnd() + "…";
+const SCALE=3;
+const ART_SIZE=77;
+const PILL_TOP=63;
+const MAX_TEXT_WIDTH=184;
+const MIN_PILL_WIDTH=136;
+const FONT='700 15px Arial, Helvetica, sans-serif';
+const DISH_FONT='500 12px Arial, Helvetica, sans-serif';
+type Crop={x:number;y:number;w:number;h:number};
+const cropCache=new WeakMap<HTMLImageElement,Crop>();
+function truncateToWidth(text:string,width:(s:string)=>number,max=MAX_TEXT_WIDTH):string{
+ if(width(text)<=max)return text;
+ let trimmed=text;
+ while(trimmed.length&&width(trimmed+"…")>max)trimmed=trimmed.slice(0,-1);
+ return trimmed.trimEnd()+"…";
 }
-
-/** Keep small names on one line; give longer names up to two readable lines. */
-export function shopNameLines(
-  name: string,
-  width: (s: string) => number,
-): string[] {
-  const value = name.replace(/\s+/g, " ").trim() || "Food stop";
-  if (width(value) <= MAX_TEXT_WIDTH) return [value];
-
-  const words = value.split(" ");
-  let first = "";
-  let count = 0;
-  for (const word of words) {
-    const candidate = first ? first + " " + word : word;
-    if (width(candidate) > MAX_TEXT_WIDTH) break;
-    first = candidate;
-    count++;
-  }
-  if (count === 0) return [truncateToWidth(value, width)];
-  const rest = words.slice(count).join(" ");
-  return rest
-    ? [first, truncateToWidth(rest, width)]
-    : [first];
+export function shopNameLines(name:string,width:(s:string)=>number):string[]{
+ const value=name.replace(/\s+/g," ").trim()||"Food stop";
+ if(width(value)<=MAX_TEXT_WIDTH)return [value];
+ const words=value.split(" ");
+ let first="",count=0;
+ for(const word of words){
+  const candidate=first?first+" "+word:word;
+  if(width(candidate)>MAX_TEXT_WIDTH)break;
+  first=candidate;count++;
+ }
+ if(count===0)return [truncateToWidth(value,width)];
+ const rest=words.slice(count).join(" ");
+ return rest?[first,truncateToWidth(rest,width)]:[first];
 }
-
-/** Stable sprite names for shops, including after an edited shop name. */
-export function shopMarkerId(id: string, name: string, food: string): string {
-  let hash = 2166136261;
-  const token = name + "|" + food;
-  for (let i = 0; i < token.length; i++)
-    hash = Math.imul(hash ^ token.charCodeAt(i), 16777619) >>> 0;
-  return "shop-pill-" + id + "-" + hash.toString(16);
+/** Use verified category or a short supplied famous-for value, never invent a dish. */
+export function markerDishLabel(dish:string|null,famousFor:string):string{
+ const description=famousFor.trim().replace(/^(known|famous) for\s*:?\s*/i,"");
+ if(description&&description.length<=34&&!/[.!?]/.test(description))return description;
+ if(dish==="Tea"&&/irani chai/i.test(famousFor))return "Irani Chai";
+ return dish||"Local favourite";
 }
-
-function roundedPill(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, width: number, height: number,
-) {
-  const radius = height / 2;
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
+export function shopMarkerId(id:string,name:string,food:string):string{
+ let hash=2166136261;
+ const token=name+"|"+food;
+ for(let i=0;i<token.length;i++)hash=Math.imul(hash^token.charCodeAt(i),16777619)>>>0;
+ return "shop-pill-"+id+"-"+hash.toString(16);
 }
-
-export function drawShopMarker(art: HTMLImageElement, name: string, verifiedGem = false): ImageData {
-  const measureCanvas = document.createElement("canvas");
-  const measureCtx = measureCanvas.getContext("2d");
-  if (!measureCtx) throw new Error("Unable to draw food map markers");
-  measureCtx.font = FONT;
-  const shortName = name.trim().split(/\s+/).slice(0, 2).join(" ") || "Food stop";
-  const lines = shopNameLines(shortName, (text) => measureCtx.measureText(text).width);
-  const measured = Math.max(...lines.map(line => measureCtx.measureText(line).width));
-  const pillWidth = Math.max(MIN_PILL_WIDTH, Math.ceil(measured + 34));
-  const pillHeight = lines.length === 1 ? 36 : 50;
-  const width = pillWidth + 46; // Room for two separate orange side dots
-  const height = PILL_TOP + pillHeight + 8;
-  const canvas = document.createElement("canvas");
-  canvas.width = width * SCALE;
-  canvas.height = height * SCALE;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Unable to draw food map markers");
-  ctx.scale(SCALE, SCALE);
-
-  // Crop the illustration first, then paint it on top of the name capsule.
-  // High-DPI composite: keep the artwork crisp and overlap the white pill
-  // into the top edge of the name pill so there is no floating gap.
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  // Crop transparent padding supplied by the generated food illustration.
-  // Otherwise the dish itself looks tiny and floats above the name pill.
-  const cropCanvas = document.createElement("canvas");
-  cropCanvas.width = art.naturalWidth || art.width;
-  cropCanvas.height = art.naturalHeight || art.height;
-  const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
-  let crop = { x: 0, y: 0, w: cropCanvas.width, h: cropCanvas.height };
-  if (cropCtx) {
-    cropCtx.drawImage(art, 0, 0);
-    const pixels = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height).data;
-    let left = cropCanvas.width, top = cropCanvas.height, right = -1, bottom = -1;
-    for (let y = 0; y < cropCanvas.height; y++) {
-      for (let x = 0; x < cropCanvas.width; x++) {
-        if (pixels[(y * cropCanvas.width + x) * 4 + 3] < 72) continue;
-        left = Math.min(left, x); top = Math.min(top, y);
-        right = Math.max(right, x); bottom = Math.max(bottom, y);
-      }
-    }
-    if (right >= left && bottom >= top)
-      crop = { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
+function roundedPill(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number){
+ const radius=Math.min(r,h/2,w/2);
+ ctx.beginPath();ctx.moveTo(x+radius,y);ctx.lineTo(x+w-radius,y);
+ ctx.quadraticCurveTo(x+w,y,x+w,y+radius);
+ ctx.lineTo(x+w,y+h-radius);
+ ctx.quadraticCurveTo(x+w,y+h,x+w-radius,y+h);
+ ctx.lineTo(x+radius,y+h);
+ ctx.quadraticCurveTo(x,y+h,x,y+h-radius);
+ ctx.lineTo(x,y+radius);ctx.quadraticCurveTo(x,y,x+radius,y);
+ ctx.closePath();
+}
+function croppedArt(art:HTMLImageElement):Crop{
+ const cached=cropCache.get(art);if(cached)return cached;
+ const canvas=document.createElement("canvas");
+ canvas.width=art.naturalWidth||art.width;
+ canvas.height=art.naturalHeight||art.height;
+ let crop:Crop={x:0,y:0,w:canvas.width,h:canvas.height};
+ const ctx=canvas.getContext("2d",{willReadFrequently:true});
+ if(ctx&&canvas.width&&canvas.height){
+  ctx.drawImage(art,0,0);
+  const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  let left=canvas.width,top=canvas.height,right=-1,bottom=-1;
+  for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){
+   if(pixels[(y*canvas.width+x)*4+3]<72)continue;
+   left=Math.min(left,x);top=Math.min(top,y);
+   right=Math.max(right,x);bottom=Math.max(bottom,y);
   }
-  const left = (width - pillWidth) / 2;
-  const middleY = PILL_TOP + pillHeight / 2;
-
-  // Reference: two bright orange dots on either side of the white capsule.
-  ctx.fillStyle = "#FA8123";
-  for (const x of [left - 12, left + pillWidth + 12]) {
-    ctx.beginPath();
-    ctx.arc(x, middleY, 7, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.save();
-  ctx.shadowColor = "rgba(24, 39, 34, 0.20)";
-  ctx.shadowBlur = 9;
-  ctx.shadowOffsetY = 3;
-  ctx.fillStyle = "#FFFFFF";
-  roundedPill(ctx, left, PILL_TOP, pillWidth, pillHeight);
-  ctx.fill();
-  ctx.restore();
-  ctx.strokeStyle = "rgba(45, 59, 52, 0.08)";
-  ctx.lineWidth = 0.8;
-  roundedPill(ctx, left, PILL_TOP, pillWidth, pillHeight);
-  ctx.stroke();
-
-  // Paint the trimmed dish AFTER the pill, so the dish rests on its top
-  // edge rather than disappearing behind the white background. Its lower
-  // pixels intentionally overlap the pill by 16px.
-  const imageRatio = crop.w / crop.h;
-  const drawnWidth = Math.min(ART_SIZE, ART_SIZE * imageRatio);
-  const drawnHeight = Math.min(ART_SIZE, ART_SIZE / imageRatio);
-  ctx.drawImage(art, crop.x, crop.y, crop.w, crop.h,
-    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 16,
-    drawnWidth, drawnHeight);
-
-
-
-  ctx.font = FONT;
-  ctx.fillStyle = "#17211D";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  if (lines.length === 1)
-    ctx.fillText(lines[0], width / 2, middleY + 1);
-  else {
-    ctx.fillText(lines[0], width / 2, middleY - 8);
-    ctx.fillText(lines[1], width / 2, middleY + 9);
-  }
-
-  if (verifiedGem) {
-    // Small diamond overlay: only included for verified Hidden Gems.
-    const gx = width / 2 + 44, gy = 23;
-    ctx.fillStyle = "#8039CA";
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(gx, gy, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(gx, gy - 10);
-    ctx.lineTo(gx + 10, gy);
-    ctx.lineTo(gx, gy + 10);
-    ctx.lineTo(gx - 10, gy);
-    ctx.closePath();
-    ctx.stroke();
-  }
-  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if(right>=left&&bottom>=top)crop={x:left,y:top,w:right-left+1,h:bottom-top+1};
+ }
+ cropCache.set(art,crop);return crop;
+}
+function newCanvas(w:number,h:number){
+ const canvas=document.createElement("canvas");canvas.width=w*SCALE;canvas.height=h*SCALE;
+ const ctx=canvas.getContext("2d");
+ if(!ctx)throw new Error("Unable to draw food map marker");
+ ctx.scale(SCALE,SCALE);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ return {ctx,canvas};
+}
+function foodArt(ctx:CanvasRenderingContext2D,art:HTMLImageElement,x:number,y:number,size:number){
+ const c=croppedArt(art),ratio=c.w/c.h;
+ const w=ratio>=1?size:size*ratio,h=ratio>=1?size/ratio:size;
+ ctx.drawImage(art,c.x,c.y,c.w,c.h,x-w/2,y-h/2,w,h);
+}
+export type ShopMarkerOptions={selected?:boolean;verifiedGem?:boolean};
+export function drawShopMarker(
+ art:HTMLImageElement,name:string,dish:string,options:ShopMarkerOptions={}
+):ImageData{
+ const {selected=false,verifiedGem=false}=options;
+ const measure=document.createElement("canvas").getContext("2d");
+ if(!measure)throw new Error("Unable to measure marker");
+ const shop=name.replace(/\s+/g," ").trim()||"Food stop";
+ const signature=dish.replace(/\s+/g," ").trim()||"Local favourite";
+ measure.font=FONT;
+ const title=truncateToWidth(shop,text=>measure.measureText(text).width);
+ const titleWidth=measure.measureText(title).width;
+ measure.font=DISH_FONT;
+ const subtitle=truncateToWidth(signature,text=>measure.measureText(text).width,MAX_TEXT_WIDTH-7);
+ const subtitleWidth=measure.measureText(subtitle).width;
+ const pillWidth=Math.max(MIN_PILL_WIDTH,Math.ceil(Math.max(titleWidth,subtitleWidth)+30));
+ const width=pillWidth+32,pillHeight=55,height=146;
+ const {ctx,canvas}=newCanvas(width,height);
+ const left=(width-pillWidth)/2;
+ ctx.save();ctx.shadowColor=selected?"rgba(115,72,25,.31)":"rgba(30,44,40,.2)";
+ ctx.shadowBlur=selected?15:11;ctx.shadowOffsetY=4;ctx.fillStyle="#FFFFFF";
+ roundedPill(ctx,left,PILL_TOP,pillWidth,pillHeight,21);ctx.fill();ctx.restore();
+ ctx.strokeStyle=selected?"#F28A33":"rgba(46,66,55,.12)";
+ ctx.lineWidth=selected?2.5:1;
+ roundedPill(ctx,left,PILL_TOP,pillWidth,pillHeight,21);ctx.stroke();
+ // Icon intentionally overlaps the top of the rounded white card.
+ foodArt(ctx,art,width/2,PILL_TOP-ART_SIZE/2+11,ART_SIZE);
+ ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.font=FONT;ctx.fillStyle="#17211D";
+ ctx.fillText(title,width/2,PILL_TOP+27);
+ ctx.font=DISH_FONT;ctx.fillStyle="#657B8C";
+ ctx.fillText(subtitle,width/2,PILL_TOP+44);
+ // Single small orange map anchor below the pill.
+ const middleY=PILL_TOP+pillHeight+12;
+ ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(width/2,middleY,8.5,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#FA8123";ctx.beginPath();ctx.arc(width/2,middleY,5.7,0,Math.PI*2);ctx.fill();
+ if(verifiedGem){
+  const gx=width/2+ART_SIZE/2-3,gy=25;
+  ctx.fillStyle="#8039CA";ctx.beginPath();ctx.arc(gx,gy,11,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#FFFFFF";ctx.lineWidth=1.5;ctx.beginPath();
+  ctx.moveTo(gx,gy-6);ctx.lineTo(gx+6,gy);ctx.lineTo(gx,gy+6);
+  ctx.lineTo(gx-6,gy);ctx.closePath();ctx.stroke();
+ }
+ return ctx.getImageData(0,0,canvas.width,canvas.height);
+}
+/** Shared lightweight icon-only sprite at overview zoom. */
+export function drawCompactShopMarker(art:HTMLImageElement):ImageData{
+ const width=86,height=102,{ctx,canvas}=newCanvas(width,height);
+ ctx.save();ctx.shadowColor="rgba(30,44,40,.2)";
+ ctx.shadowBlur=8;ctx.shadowOffsetY=3;ctx.fillStyle="#FFFFFF";
+ ctx.beginPath();ctx.arc(width/2,42,38,0,Math.PI*2);ctx.fill();ctx.restore();
+ foodArt(ctx,art,width/2,42,66);
+ ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(width/2,88,8.5,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#FA8123";ctx.beginPath();ctx.arc(width/2,88,5.7,0,Math.PI*2);ctx.fill();
+ return ctx.getImageData(0,0,canvas.width,canvas.height);
 }
