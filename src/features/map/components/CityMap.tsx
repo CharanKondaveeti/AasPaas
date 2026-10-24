@@ -17,7 +17,6 @@ import { fullNameCard, minNewMarkerDistance, prominenceScore } from "../layers/p
 const PLACE_ICON_LAYER = "aaspaas-place-icons";
 const COMPACT_ICON_LAYER = "aaspaas-compact-food-icons";
 const SELECTED_ICON_LAYER = "aaspaas-selected-food-icon";
-const FOOD_LABEL_MIN_ZOOM = 13.6;
 type Props = {
   places: Place[];
   markerScope: string;
@@ -352,8 +351,8 @@ export default function CityMap(props: Props) {
     const instance=map.current;
     if(!ready||!instance)return;
     const filter:["!=",["get",string],string]=["!=",["get","id"],props.selected?.id||""];
-    instance.setFilter(PLACE_ICON_LAYER,filter);
-    instance.setFilter(COMPACT_ICON_LAYER,filter);
+    instance.setFilter(PLACE_ICON_LAYER,["all",filter,["==",["get","fullCard"],true]]);
+    instance.setFilter(COMPACT_ICON_LAYER,["all",filter,["==",["get","fullCard"],false]]);
     const selectedSource=instance.getSource("aaspaas-selected-place") as GeoJSONSource|undefined;
     if(!selectedSource)return;
     const p=props.selected;
