@@ -276,7 +276,7 @@ export default function ExplorePage() {
             ) : (
               <>
                 <div className="panel-intro">
-                  <span className="eyebrow">{sampleMode&&group==="food"?"DEMO · 600 FICTIONAL FOOD PLACES":"TAKE THE SCENIC DETOUR"}</span>
+                  <span className="eyebrow">{sampleMode&&group==="food"?"FOOD PREVIEW · UNVERIFIED LOCATIONS":"TAKE THE SCENIC DETOUR"}</span>
                   <h1>
                     {query ? (
                       "Find your next stop."
@@ -385,7 +385,7 @@ export default function ExplorePage() {
                         </span>
                         <span className="place-row-text">
                           <strong>{p.name}</strong>
-                          {p.is_demo&&<span className="demo-list-tag">FICTIONAL SAMPLE · NOT A REAL SHOP</span>}
+                          {p.is_demo&&<span className="demo-list-tag">Preview listing</span>}
                           <span>
                             {isVerifiedGem(p) ? "♦ Hidden Gem" : (p.dish || p.category)} <b>·</b> {p.area}
                           </span>
