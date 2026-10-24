@@ -1,35 +1,31 @@
-/**
- * A map place stays visible once it has appeared at neighbourhood zoom.
- * It only disappears when the user zooms far enough out for the city overview.
- * Retain records across viewport RPC refreshes (which can return different subsets).
+import { hideZoom, prominenceScore, revealZoom } from "./prominence";
+import type { Place } from "../../../lib/types";
+
+type LocatedPlace = Pick<Place, "id" | "latitude" | "longitude" | "prominence_score">;
+
+/** Remember only markers revealed within the viewport; don't drop them on RPC refresh.
+ * At wide zoom, iconic places remain even when local places have disappeared.
+ * Density applies to NEW reveals only, never to already-visible markers.
  */
-export const PLACE_REVEAL_ZOOM = 12.8;
-export const PLACE_HIDE_ZOOM = 10.8;
-
-type LocatedPlace = { id: string; longitude: number; latitude: number };
-
 export function keepRevealedPlaces<T extends LocatedPlace>(
   seen: Map<string, T>,
   incoming: readonly T[],
   zoom: number,
   inViewport: (place: T) => boolean,
+  canReveal: (candidate: T, visible: readonly T[]) => boolean = () => true,
 ): T[] {
-  if (zoom < PLACE_HIDE_ZOOM) {
-    seen.clear();
-    return [];
+  for (const [id, place] of seen) {
+    if (zoom < hideZoom(place)) seen.delete(id);
   }
-
-  if (zoom >= PLACE_REVEAL_ZOOM) {
-    for (const place of incoming) {
-      if (
-        Number.isFinite(place.longitude) &&
-        Number.isFinite(place.latitude) &&
-        inViewport(place)
-      ) {
-        seen.set(place.id, place);
-      }
-    }
+  const ordered = [...incoming].sort(
+    (a, b) => prominenceScore(b) - prominenceScore(a) || a.id.localeCompare(b.id),
+  );
+  for (const place of ordered) {
+    if (!Number.isFinite(place.longitude) || !Number.isFinite(place.latitude)) continue;
+    if (!inViewport(place) || zoom < revealZoom(place)) continue;
+    if (seen.has(place.id) || canReveal(place, [...seen.values()])) seen.set(place.id, place);
   }
-
-  return [...seen.values()];
+  return [...seen.values()].sort(
+    (a, b) => prominenceScore(a) - prominenceScore(b) || a.id.localeCompare(b.id),
+  );
 }
