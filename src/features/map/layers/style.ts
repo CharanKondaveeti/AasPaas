@@ -96,6 +96,9 @@ export function applyCityPalette(map: Map): void {
       }
     }
     if (layer.type === "symbol") {
+      // Keep geographic text labels but strip artwork icons from the
+      // basemap too. Category/filter buttons remain untouched.
+      safeLayout(map, id, "icon-image", "");
       if (/poi|shield|housenumber|house-number|aerodrome|airport-label|transit/.test(name)) {
         safeLayout(map, id, "visibility", "none");
       } else {
