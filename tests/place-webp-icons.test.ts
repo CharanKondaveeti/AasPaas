@@ -31,8 +31,8 @@ test("dish matches the correct miniature, without inventing food identities", ()
   assert.equal(iconFor("Food",null,"Pani Puri Stop"),"pani-puri");
   assert.equal(iconFor("Food",null,"","Hot Idli Breakfast"),"idli");
   assert.equal(iconFor("Food",null,"Kebab Corner"),"kebab");
-  assert.equal(iconFor("Food","Mandi","Wah Mandi"),null);
-  assert.equal(iconFor("Food","Sweets","Sweet Shop"),null);
+  assert.equal(iconFor("Food","Mandi","Wah Mandi"),"mandi");
+  assert.equal(iconFor("Food","Sweets","Sweet Shop"),"sweets");
   assert.equal(iconFor("Places","Biryani"),null);
   assert.equal(iconFor("Nature",null),null);
 });

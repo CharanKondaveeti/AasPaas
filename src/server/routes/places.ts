@@ -15,7 +15,13 @@ export async function GET(request: Request) {
       category = p.get("category") || "All",
       dish = p.get("dish") || "",
       group = p.get("group") || "all",
-      hiddenOnly = p.get("hidden") === "1";
+      hiddenOnly = p.get("hidden") === "1",
+      budgetText = p.get("budget") || "", budget=budgetText?Number(budgetText):null,
+      hours=p.get("hours")||"any",diet=p.get("diet")||"any",style=p.get("style")||"any";
+    if(budget!==null&&![50,100,200,500].includes(budget))throw new ApiError(400,"Invalid budget.");
+    if(!["any","open_now","late_night","early_morning"].includes(hours))throw new ApiError(400,"Invalid hour filter.");
+    if(!["any","veg","non_veg","egg"].includes(diet))throw new ApiError(400,"Invalid diet filter.");
+    if(!["any","street_food","tiffins","breakfast","midnight","iconic","old_favourite","desserts","cafes"].includes(style))throw new ApiError(400,"Invalid style.");
     if (!["all", "food", "experiences", "specialty_shops"].includes(group))
       throw new ApiError(400, "Invalid discovery group.");
     if (!backendReady()) {
@@ -28,6 +34,7 @@ export async function GET(request: Request) {
               v.latitude <= bounds[3])) &&
           (category === "All" || v.category === category) &&
           (!dish || v.dish === dish) &&
+          (group!=="food" || (budget===null && hours==="any" && diet==="any" && style==="any")) &&
           (group === "all" || placeDiscoveryGroup(v) === group) &&
           (!hiddenOnly || isVerifiedGem(v)) &&
           (!q ||
@@ -37,17 +44,12 @@ export async function GET(request: Request) {
       );
       return Response.json({ places, mode: "curated", truncated: false });
     }
-    const { data, error } = await db().rpc("explore_discoveries", {
-      west: bounds[0],
-      south: bounds[1],
-      east: bounds[2],
-      north: bounds[3],
-      search_text: q,
-      filter_category: category,
-      filter_dish: dish,
-      filter_group: group,
-      only_hidden_gems: hiddenOnly,
-    });
+    const location={west:bounds[0],south:bounds[1],east:bounds[2],north:bounds[3],search_text:q};
+    const {data,error}=group==="food"
+      ? await db().rpc("explore_famous_food",{...location,filter_dish:dish,filter_budget:budget,
+         filter_hours:hours,filter_diet:diet,filter_style:style,only_hidden_gems:hiddenOnly})
+      : await db().rpc("explore_discoveries",{...location,filter_category:category,filter_dish:dish,
+         filter_group:group,only_hidden_gems:hiddenOnly});
     if (error) throw error;
     return Response.json({
       places: data.slice(0, 300),
