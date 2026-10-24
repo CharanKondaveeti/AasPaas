@@ -123,7 +123,7 @@ export default function ExplorePage() {
         target={target}
       /></Suspense>
       <header className="topbar">
-        <a className="brand" href="/" aria-label="AasPaas home">
+        <a className="brand" href={import.meta.env.BASE_URL} aria-label="AasPaas home">
           <span className="brand-mark">
             <MapPin size={22} />
           </span>
