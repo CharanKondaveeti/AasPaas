@@ -341,10 +341,14 @@ export default function ExplorePage() {
                         <span
                           className={`place-icon ${p.category === "Nature" ? "green" : ""}`}
                         >
-                          <img
-                            src={iconPath(iconFor(p.category, p.dish))}
-                            alt=""
-                          />
+                          {iconFor(p.category, p.dish, p.name, p.famous_for) ? (
+                            <img
+                              src={iconPath(iconFor(p.category, p.dish, p.name, p.famous_for)!)}
+                              alt=""
+                            />
+                          ) : (
+                            <MapPin size={19} aria-hidden="true" />
+                          )}
                         </span>
                         <span className="place-row-text">
                           <strong>{p.name}</strong>
