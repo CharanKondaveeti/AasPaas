@@ -1,6 +1,6 @@
 "use client";
 import {lazy,Suspense} from "react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Search,
   MapPin,
@@ -23,6 +23,7 @@ import {
   type Place,
 } from "@/lib/types";
 import { getPlaces } from "@/services/placeService";
+import { needsViewportFetch, paddedBounds } from "../data/viewport";
 import FoodFilters from "@/features/food/components/FoodFilters";
 import { emptyFoodFilters, type FoodFiltersState } from "@/features/food/foodService";
 import { iconFor, iconPath, storedIconPath } from "@/features/map/layers/icons";
@@ -37,6 +38,7 @@ const discoveryTabs = [
   { value: "specialty_shops", label: "Special Shops", Icon: ShoppingBag },
 ] as const;
 export default function ExplorePage() {
+  const viewportInitialized = useRef(false);
   const [bounds, setBounds] = useState<Bounds>(CITY_BOUNDS),
     [query, setQuery] = useState(""),
     [cityAvailable, setCityAvailable] = useState(true),
@@ -76,7 +78,17 @@ export default function ExplorePage() {
   const markerScope = JSON.stringify([
     query, category, group, hiddenOnly, dish, foodFilters, sampleMode,
   ]);
-  const updateBounds = useCallback((b: Bounds) => setBounds(b), []);
+  const updateBounds = useCallback((view: Bounds) => {
+    setBounds(previous => {
+      if (!viewportInitialized.current) {
+        viewportInitialized.current = true;
+        return paddedBounds(view);
+      }
+      // Don't replace the place dataset on every short pan. The loaded
+      // geographic margin is still covering the screen.
+      return needsViewportFetch(view, previous) ? paddedBounds(view) : previous;
+    });
+  }, []);
   useEffect(() => {
     const abort = new AbortController();
     // AasPaas's approved place collection is still Hyderabad-only.
@@ -307,7 +319,7 @@ export default function ExplorePage() {
                       ? "More regions coming soon"
                       : loading
                         ? "Looking around…"
-                        : `${places.length} ${sampleMode&&group==="food"?"sample ":""}places ${query ? "found" : "in this view"}`}
+                        : `${places.length} ${sampleMode&&group==="food"?"sample ":""}places ${query ? "found" : "around this view"}`}
                     <button
                       onClick={() => setShowList(!showList)}
                       aria-label="Toggle place list"
