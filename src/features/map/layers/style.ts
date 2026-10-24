@@ -21,7 +21,6 @@ export const AASPAAS_COLORS = {
   label: "#465449",
 } as const;
 
-const BUSH_PATTERN_ID = "galli-bushy-green-pattern";
 
 // Only decorate actual basemap greenery, never whole neighbourhoods, roads,
 // lakes, snow/ice classes, or the administrative boundary source.
@@ -97,6 +96,9 @@ export function applyCityPalette(map: Map): void {
       }
     }
     if (layer.type === "symbol") {
+      // Keep geographic text labels but strip artwork icons from the
+      // basemap too. Category/filter buttons remain untouched.
+      safeLayout(map, id, "icon-image", "");
       if (/poi|shield|housenumber|house-number|aerodrome|airport-label|transit/.test(name)) {
         safeLayout(map, id, "visibility", "none");
       } else {
@@ -107,42 +109,3 @@ export function applyCityPalette(map: Map): void {
     }
   }
 }
-
-/**
- * A transparent, repeating leafy texture is rendered BY MapLibre, clipped to
- * real mapped parks and vegetation. Existing vector roads and lakes still draw
- * above it. Never create a React DOM marker for each bush.
- *
- * Call only after registering the BUSH_PATTERN_ID image.
- */
-export function applyBushyGreenTexture(map: Map): void {
-  if (!map.hasImage(BUSH_PATTERN_ID)) return;
-  const originalLayers = map.getStyle().layers ?? [];
-  for (let i = 0; i < originalLayers.length; i++) {
-    const layer = originalLayers[i];
-    if (layer.type !== "fill" || !isGreenLayer(layer.id.toLowerCase())) continue;
-    if (!layer.source || !layer["source-layer"]) continue;
-    if (layer.maxzoom !== undefined && layer.maxzoom <= 11) continue;
-    const id = "galli-bush-" + layer.id;
-    if (map.getLayer(id)) continue;
-    const nextId = originalLayers[i + 1]?.id;
-    // Match the original geometry, filter and zoom range, so texture never
-    // spills into water, streets, or outside the mapped green polygon.
-    map.addLayer({
-      id,
-      type: "fill",
-      source: layer.source,
-      "source-layer": layer["source-layer"],
-      ...(layer.filter ? { filter: layer.filter } : {}),
-      minzoom: Math.max(12.6, layer.minzoom ?? 0),
-      ...(layer.maxzoom === undefined ? {} : { maxzoom: layer.maxzoom }),
-      paint: {
-        "fill-pattern": BUSH_PATTERN_ID,
-        // Decorative leaf pattern holds a constant opacity after reveal.
-        "fill-opacity": 0.54,
-      },
-    }, nextId);
-  }
-}
-
-export const GALLI_BUSH_PATTERN_ID = BUSH_PATTERN_ID;

@@ -68,20 +68,35 @@ export function addIndiaAvailabilityLayers(
   const firstLabels = map.getStyle().layers.find(layer => layer.type === "symbol")?.id;
   map.addSource("ghmc-boundary", { type: "geojson", data: data.hyderabad,
     attribution: "GHMC outline: © OpenStreetMap contributors (2018), Datameet" });
+  // Soft azure/teal geographic highlight at city scale. At street scale
+  // both the polygon wash and its outline fade to zero, leaving the plain
+  // clean map. Zoom stays the direct input of each paint expression.
   map.addLayer({
     id: "ghmc-active-city",
     type: "fill",
     source: "ghmc-boundary",
-    paint: { "fill-color": "#58C59D", "fill-opacity": 0.16 },
+    paint: {
+      "fill-color": "#70C9E6",
+      "fill-opacity": [
+        "interpolate", ["linear"], ["zoom"],
+        8, 0.19,
+        10.5, 0.14,
+        11.6, 0.07,
+        12.6, 0,
+      ],
+    },
   }, firstLabels);
   map.addLayer({
     id: "ghmc-boundary-halo",
     type: "line",
     source: "ghmc-boundary",
     paint: {
-      "line-color": "#C8EDDA",
-      "line-opacity": 0.75,
-      "line-width": ["interpolate", ["linear"], ["zoom"], 4, 3, 9, 7, 13, 9],
+      "line-color": "#D1F0FA",
+      "line-opacity": [
+        "interpolate", ["linear"], ["zoom"],
+        8, 0.72, 11.0, 0.54, 12.6, 0,
+      ],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 4, 2.6, 10, 5.5, 12.6, 3.0],
     },
   }, firstLabels);
   map.addLayer({
@@ -89,9 +104,12 @@ export function addIndiaAvailabilityLayers(
     type: "line",
     source: "ghmc-boundary",
     paint: {
-      "line-color": "#087A5A",
-      "line-opacity": 0.92,
-      "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.1, 9, 2.4, 13, 3.2],
+      "line-color": "#48A8CB",
+      "line-opacity": [
+        "interpolate", ["linear"], ["zoom"],
+        8, 0.86, 10.6, 0.76, 11.6, 0.36, 12.6, 0,
+      ],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1, 9, 2, 12.6, 1.2],
     },
   }, firstLabels);
 
@@ -159,8 +177,8 @@ export function addIndiaAvailabilityLayers(
       "text-padding": 3,
     },
     paint: {
-      "text-color": "#086A4F",
-      "text-halo-color": "#F8FFF9",
+      "text-color": "#307FA1",
+      "text-halo-color": "#F9FDFF",
       "text-halo-width": 2.6,
       "text-opacity": ["interpolate", ["linear"], ["zoom"], 11.5, 1, 12.45, 0],
     },

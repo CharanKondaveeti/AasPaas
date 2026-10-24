@@ -2,20 +2,21 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { CITY_CENTER } from "../src/lib/types.ts";
-import { PLACES_REVEAL_ZOOM, PLACES_FULLY_VISIBLE_ZOOM } from "../src/features/map/layers/discoveryZoom.ts";
 import { containsHyderabad, INDIA_MIN_ZOOM, HYDERABAD_OVERVIEW_ZOOM } from "../src/features/map/layers/indiaRegions.ts";
 import type { MultiPolygon } from "geojson";
 
-test("India view zooms out, then reveals Hyderabad places only when close", () => {
+test("India map keeps navigation and geographic labels without any POI sprites", () => {
   assert.ok(INDIA_MIN_ZOOM < 5);
   assert.ok(HYDERABAD_OVERVIEW_ZOOM > INDIA_MIN_ZOOM);
-  assert.ok(HYDERABAD_OVERVIEW_ZOOM < PLACES_REVEAL_ZOOM);
-  assert.ok(PLACES_REVEAL_ZOOM < PLACES_FULLY_VISIBLE_ZOOM);
   const map = readFileSync("src/features/map/components/CityMap.tsx", "utf8");
   assert.match(map, /minZoom: INDIA_MIN_ZOOM/);
   assert.match(map, /renderWorldCopies: false/);
-  assert.doesNotMatch(map, /maxBounds:\s*\[\s*\[77\.9/);
-  assert.match(map, /loadIndiaRegions\(abort\.signal\)/);
+  assert.ok(map.includes('loadIndiaRegions(abort.signal)'));
+  for (const artwork of ["galli-greenery-base", "cluster-icon-left", "cluster-icon-middle",
+    "cluster-icon-right", "place-icons", "bushy-green-pattern", "loadGeneratedScenery",
+    'addSource("places"', "GREENERY_ASSETS"]) {
+    assert.ok(!map.includes(artwork), "map has no decoration: " + artwork);
+  }
 });
 
 test("Hyderabad's mapped municipal polygon contains its centre and excludes distant India", () => {
@@ -46,11 +47,16 @@ test("state and district Coming soon locations are geographic rather than fixed 
   assert.doesNotMatch(readFileSync("src/features/map/components/CityMap.tsx","utf8"),/className="city-map-intro"/);
 });
 
-test("all POI symbol layers still obey the reveal threshold",()=>{
-  const source=readFileSync("src/features/map/components/CityMap.tsx","utf8");
-  for(const id of ["cluster-icon-left","cluster-icon-middle","cluster-icon-right","place-icons"]){
-    const i=source.indexOf('id: "'+id+'"');
-    assert.ok(i>=0);
-    assert.match(source.slice(i,i+250),/minzoom: PLACES_REVEAL_ZOOM/);
+test("municipal boundary uses cool blue and fades completely at street zoom", () => {
+  const style = readFileSync("src/features/map/layers/indiaRegions.ts","utf8");
+  assert.ok(style.includes('"fill-color": "#70C9E6"'));
+  assert.ok(style.includes('"line-color": "#48A8CB"'));
+  for (const layerId of ["ghmc-active-city","ghmc-boundary-halo","ghmc-solid-border"]) {
+    const at = style.indexOf('id: "' + layerId + '"');
+    assert.ok(at >= 0, "missing " + layerId);
+    const following = style.slice(at, at + 750);
+    assert.ok(following.includes("12.6, 0"), "highlight must fade completely at zoom 12.6: " + layerId);
   }
+  const basemap = readFileSync("src/features/map/layers/style.ts","utf8");
+  assert.ok(basemap.includes('safeLayout(map, id, "icon-image", "")'));
 });
