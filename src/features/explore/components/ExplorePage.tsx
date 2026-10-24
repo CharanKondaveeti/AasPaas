@@ -25,7 +25,7 @@ import {
 import { getPlaces } from "@/services/placeService";
 import FoodFilters from "@/features/food/components/FoodFilters";
 import { emptyFoodFilters, type FoodFiltersState } from "@/features/food/foodService";
-import { iconFor, iconPath } from "@/features/map/layers/icons";
+import { iconFor, iconPath, storedIconPath } from "@/features/map/layers/icons";
 import PlaceDetails from "./PlaceDetails";
 import SuggestionForm from "@/features/suggestions/components/SuggestionForm";
 const CityMap=lazy(()=>import("@/features/map/components/CityMap"));
@@ -376,8 +376,9 @@ export default function ExplorePage() {
                         >
                           {iconFor(p.category, p.dish, p.name, p.famous_for) ? (
                             <img
-                              src={iconPath(iconFor(p.category, p.dish, p.name, p.famous_for)!)}
+                              src={storedIconPath(iconFor(p.category, p.dish, p.name, p.famous_for)!) ?? iconPath(iconFor(p.category, p.dish, p.name, p.famous_for)!)}
                               alt=""
+                              onError={e=>{const fallback=iconPath(iconFor(p.category,p.dish,p.name,p.famous_for)!);if(!e.currentTarget.src.endsWith(fallback))e.currentTarget.src=fallback;}}
                             />
                           ) : (
                             <MapPin size={19} aria-hidden="true" />
