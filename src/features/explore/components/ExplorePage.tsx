@@ -29,6 +29,7 @@ import { iconFor, iconPath } from "@/features/map/layers/icons";
 import PlaceDetails from "./PlaceDetails";
 import SuggestionForm from "@/features/suggestions/components/SuggestionForm";
 const CityMap=lazy(()=>import("@/features/map/components/CityMap"));
+const githubPagesPreview = import.meta.env.VITE_GITHUB_PAGES === "true";
 const categoryIcons = [
   Compass,
   Utensils,
@@ -122,7 +123,7 @@ export default function ExplorePage() {
         target={target}
       /></Suspense>
       <header className="topbar">
-        <a className="brand" href="/" aria-label="AasPaas home">
+        <a className="brand" href={import.meta.env.BASE_URL} aria-label="AasPaas home">
           <span className="brand-mark">
             <MapPin size={22} />
           </span>
@@ -136,10 +137,12 @@ export default function ExplorePage() {
         </span>
         <span className="topbar-spacer" />
         <span className="tagline">A little closer to your city.</span>
-        <button className="suggest-top" onClick={() => setShowSuggest(true)}>
-          <Plus size={17} />
-          <span>Suggest a place</span>
-        </button>
+        {!githubPagesPreview && (
+          <button className="suggest-top" onClick={() => setShowSuggest(true)}>
+            <Plus size={17} />
+            <span>Suggest a place</span>
+          </button>
+        )}
       </header>
       <div className="discovery-toolbar">
         <div className="search-box">
@@ -356,8 +359,10 @@ export default function ExplorePage() {
                 </div>
                 <div className="panel-footer">
                   <span>
-                    {truncated
-                      ? "Zoom in to see more places."
+                    {githubPagesPreview
+                      ? "GitHub Pages preview · view only."
+                      : truncated
+                        ? "Zoom in to see more places."
                       : mode === "curated"
                         ? "A small, source-checked city collection."
                         : "Local favourites, carefully reviewed."}
@@ -386,15 +391,17 @@ export default function ExplorePage() {
           >
             {showList ? "Back to map" : `Explore ${places.length} places`}
           </button>
-          <button
-            className="suggest-float"
-            onClick={() => setShowSuggest(true)}
-          >
-            <Plus size={17} /> Share your favourite corner
-          </button>
+          {!githubPagesPreview && (
+            <button
+              className="suggest-float"
+              onClick={() => setShowSuggest(true)}
+            >
+              <Plus size={17} /> Share your favourite corner
+            </button>
+          )}
         </>
       )}
-      {showSuggest && (
+      {!githubPagesPreview && showSuggest && (
         <SuggestionForm
           point={point}
           draft={draft}
@@ -407,9 +414,11 @@ export default function ExplorePage() {
           }}
         />
       )}
-      <a href="/admin" className="admin-link">
-        Curator access
-      </a>
+      {!githubPagesPreview && (
+        <a href="/admin" className="admin-link">
+          Curator access
+        </a>
+      )}
     </main>
   );
 }

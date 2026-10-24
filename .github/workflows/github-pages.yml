@@ -1,0 +1,63 @@
+name: AasPaas GitHub Pages preview
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-preview
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build read-only GitHub Pages site
+        run: npm run build
+        env:
+          GITHUB_PAGES: "true"
+          VITE_GITHUB_PAGES: "true"
+          VITE_SUPABASE_URL: "https://besbdmgryvwaqdyolmej.supabase.co"
+          # Publishable browser keys are public by design; never use sb_secret_.
+          VITE_SUPABASE_PUBLISHABLE_KEY: "${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_bFswqlE4m5MppRhb5T8bkQ_pVkNm8Jg' }}"
+
+      - name: Add GitHub Pages fallbacks
+        run: |
+          touch dist/.nojekyll
+          cp dist/index.html dist/404.html
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload built website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish website
+        id: deployment
+        uses: actions/deploy-pages@v4

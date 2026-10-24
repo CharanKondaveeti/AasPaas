@@ -15,3 +15,7 @@ Variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (public), `SUPAB
 Supabase migration: `supabase/migrations/20261023090337_city_discovery.sql`. Seed: `supabase/seed.sql`. Existing Supabase project `besbdmgryvwaqdyolmej` has both applied. Create an admin user in Supabase Auth and insert its UUID into `public.admins` using a trusted administration session. Never insert admin records using a browser or expose service credentials.
 
 Public places are approved only. Suggestions are private until approved by the curator. Photo uploads use private Storage. No gamification.
+
+## GitHub Pages preview
+
+A read-only GitHub-hosted preview is configured at [AasPaas on GitHub Pages](https://charankondaveeti.github.io/AasPaas/) using [GitHub Actions](.github/workflows/github-pages.yml). To activate Pages once, choose **GitHub Actions** under [Settings → Pages](https://github.com/CharanKondaveeti/AasPaas/settings/pages). See [setup and limitations](docs/GITHUB_PAGES.md). The main Vercel website is unchanged.
