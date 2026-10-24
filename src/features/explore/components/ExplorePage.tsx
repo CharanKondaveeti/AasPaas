@@ -17,13 +17,14 @@ import {
 } from "lucide-react";
 import {
   isVerifiedGem,
-  dishes,
   CITY_BOUNDS,
   CITY_CENTER,
   type Bounds,
   type Place,
 } from "@/lib/types";
 import { getPlaces } from "@/services/placeService";
+import FoodFilters from "@/features/food/components/FoodFilters";
+import { emptyFoodFilters, type FoodFiltersState } from "@/features/food/foodService";
 import { iconFor, iconPath } from "@/features/map/layers/icons";
 import PlaceDetails from "./PlaceDetails";
 import SuggestionForm from "@/features/suggestions/components/SuggestionForm";
@@ -43,6 +44,7 @@ export default function ExplorePage() {
     [group, setGroup] = useState("all"),
     [hiddenOnly, setHiddenOnly] = useState(false),
     [dish, setDish] = useState(""),
+    [foodFilters, setFoodFilters] = useState<FoodFiltersState>(emptyFoodFilters),
     [places, setPlaces] = useState<Place[]>([]),
     [selected, setSelected] = useState<Place | null>(null),
     [error, setError] = useState(""),
@@ -86,7 +88,7 @@ export default function ExplorePage() {
     }
     const timer = setTimeout(() => {
       setLoading(true);
-      getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, group, hiddenOnly, abort.signal)
+      getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, group, hiddenOnly, abort.signal, group === "food" ? foodFilters : undefined)
         .then((data) => {
           setPlaces(data.places);
           setMode(data.mode);
@@ -104,7 +106,7 @@ export default function ExplorePage() {
       clearTimeout(timer);
       abort.abort();
     };
-  }, [bounds, query, category, dish, group, hiddenOnly, retry]);
+  }, [bounds, query, category, dish, group, hiddenOnly, foodFilters, retry]);
   function select(p: Place) {
     setSelected(p);
     setShowList(false);
@@ -175,6 +177,7 @@ export default function ExplorePage() {
                 setGroup(value);
                 setCategory(value === "food" ? "Food" : "All");
                 setDish("");
+                setFoodFilters(emptyFoodFilters);
                 setSelected(null);
               }}
             >
@@ -194,19 +197,13 @@ export default function ExplorePage() {
             Hidden Gems
           </button>
         </nav>
-        {category === "Food" && (
-          <nav className="dish-filters" aria-label="Food filters">
-            {dishes.map((d) => (
-              <button
-                key={d}
-                className={dish === d ? "active" : ""}
-                aria-pressed={dish === d}
-                onClick={() => setDish(dish === d ? "" : d)}
-              >
-                {d}
-              </button>
-            ))}
-          </nav>
+        {group === "food" && (
+          <FoodFilters
+            value={{...foodFilters, dish}}
+            onChange={(next) => { setDish(next.dish); setFoodFilters(next); setSelected(null); }}
+            resultCount={places.length}
+            loading={loading}
+          />
         )}
       </div>
       {picking ? (
@@ -328,7 +325,7 @@ export default function ExplorePage() {
                       <p>
                         {hiddenOnly
                           ? "No curator-verified Hidden Gems here yet. Explore more of the map or try other discoveries."
-                          : "Try another category, move the map, or suggest a favourite place."}
+                          : "Try another dish or move the map. Budget and open-hours filters require verified information."}
                       </p>
                       <button
                         onClick={() => {
@@ -337,6 +334,7 @@ export default function ExplorePage() {
                           setGroup("all");
                           setHiddenOnly(false);
                           setDish("");
+                          setFoodFilters(emptyFoodFilters);
                         }}
                       >
                         Clear filters
