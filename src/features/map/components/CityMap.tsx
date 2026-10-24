@@ -83,9 +83,9 @@ export default function CityMap(props: Props) {
             } catch (error) {
               console.warn("Geographic launch boundary unavailable:", error);
             }
-            // Illustrations are just icons for actual approved places.
-            // All icons render inside MapLibre's canvas rather than laggy
-            // HTML markers. Missing artwork cannot stop the map from loading.
+            // Ten miniature WebP food illustrations replace the old SVGs.
+            // Native MapLibre symbols keep each shop name below its icon,
+            // and both follow map dragging with no HTML marker lag.
             const loadedIcons = await Promise.allSettled(
               iconNames.map(async (name) => {
                 const image = new Image();
@@ -110,15 +110,31 @@ export default function CityMap(props: Props) {
               source: "aaspaas-places",
               minzoom: PLACE_ICON_MIN_ZOOM,
               layout: {
-                "icon-image": ["coalesce", ["image", ["get", "icon"]], ["image", "places"]],
-                // Existing artwork is 80 x 80, registered at 2x, resulting
-                // in small 32px illustrative marks. Never show number clusters.
-                "icon-size": 0.80,
+                // WebP icons are 128px and added with pixelRatio 2,
+                // giving ~55px miniature dishes, anchored at real coordinates.
+                "icon-image": ["get", "icon"],
+                "icon-size": 0.86,
                 "icon-anchor": "bottom",
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
                 "icon-rotation-alignment": "viewport",
                 "icon-pitch-alignment": "viewport",
+                // Shop name sits immediately below its dish illustration.
+                "text-field": ["get", "name"],
+                "text-font": ["Noto Sans Bold"],
+                "text-size": 11,
+                "text-max-width": 10,
+                "text-max-lines": 2,
+                "text-anchor": "top",
+                "text-offset": [0, 0.35],
+                "text-allow-overlap": false,
+                "text-optional": false,
+              },
+              paint: {
+                "text-color": "#163b32",
+                "text-halo-color": "#ffffff",
+                "text-halo-width": 2,
+                "text-halo-blur": 0.25,
               },
             });
             instance.on("click", PLACE_ICON_LAYER, (e) => {
@@ -193,9 +209,13 @@ export default function CityMap(props: Props) {
     if (!source) return;
     source.setData({
       type: "FeatureCollection",
-      features: props.places
-        .filter((p) => Number.isFinite(p.longitude) && Number.isFinite(p.latitude))
-        .map((p) => ({
+      features: props.places.flatMap((p) => {
+        if (!Number.isFinite(p.longitude) || !Number.isFinite(p.latitude)) return [];
+        const icon = iconFor(p.category, p.dish, p.name, p.famous_for);
+        // Show only places with a genuinely matching illustrated food asset.
+        // Other categories still work in search, filters and the places list.
+        if (!icon) return [];
+        return [{
           type: "Feature" as const,
           geometry: {
             type: "Point" as const,
@@ -203,9 +223,11 @@ export default function CityMap(props: Props) {
           },
           properties: {
             id: p.id,
-            icon: iconFor(p.category, p.dish),
+            name: p.name,
+            icon,
           },
-        })),
+        }];
+      }),
     });
   }, [props.places, ready]);
 
