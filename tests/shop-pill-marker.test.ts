@@ -82,6 +82,6 @@ test("one icon-only sprite is shared per food dish and selected cards get orange
  assert.ok(map.includes('"icon-image": ["get", "iconCompact"]'));
  assert.ok(map.includes('const COMPACT_ICON_LAYER = "aaspaas-compact-food-icons"'));
  assert.ok(map.includes('const SELECTED_ICON_LAYER = "aaspaas-selected-food-icon"'));
- assert.ok(map.includes('instance.setFilter(COMPACT_ICON_LAYER,filter)'));
+ assert.ok(map.includes('instance.setFilter(COMPACT_ICON_LAYER,["all",filter,["==",["get","fullCard"],false]])'));
  assert.ok(map.includes('drawShopMarker(image,p.name,signature,{selected:true,verifiedGem:gem})'));
 });

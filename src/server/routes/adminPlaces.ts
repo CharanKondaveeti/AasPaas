@@ -72,6 +72,10 @@ export async function PATCH(request: Request) {
     if (old.is_demo) throw new ApiError(403,"Generated test places cannot be approved as real businesses.");
     if (parsed.data.status === "approved" && !parsed.data.source_url)
       throw new ApiError(400, "Add a verification source before publishing.");
+    if ((parsed.data.prominence_score ?? 0) >= 80 &&
+        !(parsed.data.prominence_reason || "").trim()) {
+      throw new ApiError(400, "Add a reason before ranking a place as city-famous.");
+    }
     const { listing_verified, ...safeFields } = parsed.data;
     const verifiedAt = listing_verified === true ? new Date().toISOString()
       : listing_verified === false ? null : old.listing_verified_at;

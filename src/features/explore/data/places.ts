@@ -102,5 +102,7 @@ export const seedPlaces: Place[] = rows.map(
     hours: null,
     price: null,
     status: "approved",
+    prominence_score: ({charminar:100, golconda:97, "qutb-shahi":90,
+      nimrah:98, "salar-jung":96, "hussain-sagar":95} as Record<string, number>)[id] ?? 45,
   }),
 );

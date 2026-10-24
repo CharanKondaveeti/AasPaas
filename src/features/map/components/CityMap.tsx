@@ -11,15 +11,15 @@ import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, extraFoodIcons, iconPath, storedIconPath } from "../layers/icons";
 import { drawShopMarker, drawCompactShopMarker, markerDishLabel, shopMarkerId } from "../layers/shopPillMarker";
 import { drawDiscoveryMarker } from "../layers/discoveryMarker";
+import { keepRevealedPlaces } from "../layers/markerPersistence";
+import { fullNameCard, minNewMarkerDistance, prominenceScore } from "../layers/prominence";
 
-/** Only reveal small real-place icons after zooming into Hyderabad. */
-const PLACE_ICON_MIN_ZOOM = 12.8;
 const PLACE_ICON_LAYER = "aaspaas-place-icons";
 const COMPACT_ICON_LAYER = "aaspaas-compact-food-icons";
 const SELECTED_ICON_LAYER = "aaspaas-selected-food-icon";
-const FOOD_LABEL_MIN_ZOOM = 13.6;
 type Props = {
   places: Place[];
+  markerScope: string;
   selected: Place | null;
   onSelect: (p: Place) => void;
   onBounds: (b: Bounds) => void;
@@ -33,6 +33,9 @@ export default function CityMap(props: Props) {
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     foodArt = useRef<Map<string, HTMLImageElement>>(new Map()),
+    seenPlaces = useRef<Map<string, Place>>(new Map()),
+    lastMarkerScope = useRef(""),
+    lastMarkerSnapshot = useRef(""),
     pickMarker = useRef<Marker | null>(null);
   latest.current = props;
   const [ready, setReady] = useState(false),
@@ -61,6 +64,7 @@ export default function CityMap(props: Props) {
           zoom: HYDERABAD_OVERVIEW_ZOOM,
           minZoom: INDIA_MIN_ZOOM,
           maxZoom: 19,
+          fadeDuration: 0, // prevent collision fade during map movements
           attributionControl: { compact: true },
           // No Hyderabad-only camera limits: visitors may explore all India.
           renderWorldCopies: false,
@@ -119,8 +123,8 @@ export default function CityMap(props: Props) {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
             });
-            // At distant zoom: only the dish illustration. At street zoom:
-            // name + famous dish in one pill. No numbered clustering.
+            // Iconic places display name + speciality at city overview zoom.
+            // Lower priority places reveal progressively as the user zooms in.
             instance.addSource("aaspaas-selected-place", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
@@ -129,15 +133,16 @@ export default function CityMap(props: Props) {
               id: COMPACT_ICON_LAYER,
               type: "symbol",
               source: "aaspaas-places",
-              minzoom: PLACE_ICON_MIN_ZOOM,
-              maxzoom: FOOD_LABEL_MIN_ZOOM,
+              minzoom: 7.8,
+              filter: ["==", ["get", "fullCard"], false],
               layout: {
                 "icon-image": ["get", "iconCompact"],
-                "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.64,13.6,0.78],
+                "icon-size": ["interpolate",["linear"],["zoom"],7.8,0.36,10.8,0.46,12.8,0.64,13.6,0.78],
+                "symbol-sort-key": ["get", "priority"],
                 "icon-anchor": "bottom",
                 "icon-offset": [0,14], // align orange dot with map coordinate
-                "icon-allow-overlap": false,
-                "icon-ignore-placement": false,
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
                 "icon-rotation-alignment": "viewport",
                 "icon-pitch-alignment": "viewport",
               },
@@ -146,14 +151,16 @@ export default function CityMap(props: Props) {
               id: PLACE_ICON_LAYER,
               type: "symbol",
               source: "aaspaas-places",
-              minzoom: FOOD_LABEL_MIN_ZOOM,
+              minzoom: 7.8,
+              filter: ["==", ["get", "fullCard"], true],
               layout: {
                 "icon-image": ["get", "icon"],
-                "icon-size": ["interpolate",["linear"],["zoom"],13.6,0.66,15,0.78,18,0.85],
+                "icon-size": ["interpolate",["linear"],["zoom"],7.8,0.68,9.9,0.75,13.6,0.78,15,0.85,18,0.9],
+                "symbol-sort-key": ["get", "priority"],
                 "icon-anchor": "bottom",
                 "icon-offset": [0,16],
-                "icon-allow-overlap": false,
-                "icon-ignore-placement": false,
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
                 "icon-rotation-alignment": "viewport",
                 "icon-pitch-alignment": "viewport",
               },
@@ -162,10 +169,10 @@ export default function CityMap(props: Props) {
               id: SELECTED_ICON_LAYER,
               type: "symbol",
               source: "aaspaas-selected-place",
-              minzoom: PLACE_ICON_MIN_ZOOM,
+              minzoom: 7.8,
               layout: {
                 "icon-image": ["get", "icon"],
-                "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.82,15,0.9,18,1],
+                "icon-size": ["interpolate",["linear"],["zoom"],7.8,0.7,9.9,0.78,12.8,0.82,15,0.9,18,1],
                 "icon-anchor": "bottom",
                 "icon-offset": [0,16],
                 "icon-allow-overlap": true,
@@ -179,7 +186,8 @@ export default function CityMap(props: Props) {
                 if (latest.current.picking) return;
                 const id = e.features?.[0]?.properties?.id;
                 if (typeof id !== "string") return;
-                const place = latest.current.places.find((item) => item.id === id);
+                const place = latest.current.places.find((item) => item.id === id)
+                  ?? seenPlaces.current.get(id);
                 if (place) latest.current.onSelect(place);
               });
               instance.on("mouseenter", layer, () => {
@@ -243,12 +251,45 @@ export default function CityMap(props: Props) {
   // Composite WebP + white label + dots into ONE stable GPU symbol per shop.
   // Rebuild only for new/edited shops, never during pan or zoom.
   useEffect(() => {
-    if (!ready || !map.current) return;
-    const source = map.current.getSource("aaspaas-places") as GeoJSONSource | undefined;
+    const instance = map.current;
+    if (!ready || !instance) return;
+    const source = instance.getSource("aaspaas-places") as GeoJSONSource | undefined;
     if (!source) return;
-    source.setData({
+    const syncPlaces = () => {
+      // Clear remembered places when filters or preview mode change.
+      if (lastMarkerScope.current !== props.markerScope) {
+        lastMarkerScope.current = props.markerScope;
+        seenPlaces.current.clear();
+        lastMarkerSnapshot.current = "";
+      }
+      const view = instance.getBounds();
+      const zoom = instance.getZoom();
+      const minDistance = minNewMarkerDistance(zoom);
+      const retained = keepRevealedPlaces(
+        seenPlaces.current,
+        props.places,
+        zoom,
+        (place) => view.contains([place.longitude, place.latitude]),
+        (candidate, visible) => {
+          if (!minDistance) return true;
+          const point = instance.project([candidate.longitude, candidate.latitude]);
+          return visible.every(other => {
+            const existing = instance.project([other.longitude, other.latitude]);
+            return Math.hypot(point.x - existing.x, point.y - existing.y) >= minDistance;
+          });
+        },
+      );
+      // Repeated viewport RPC responses should not rebuild identical markers.
+      const snapshot = JSON.stringify(retained.map((p) => [
+        p.id, p.longitude, p.latitude, p.name, p.category,
+        p.dish, p.famous_for, isVerifiedGem(p),
+        prominenceScore(p), fullNameCard(p, zoom),
+      ]));
+      if (snapshot === lastMarkerSnapshot.current) return;
+      lastMarkerSnapshot.current = snapshot;
+      source.setData({
       type: "FeatureCollection",
-      features: props.places.flatMap((p) => {
+      features: retained.flatMap((p) => {
         if (!Number.isFinite(p.longitude) || !Number.isFinite(p.latitude)) return [];
         const icon = iconFor(p.category, p.dish, p.name, p.famous_for);
         const image = icon ? foodArt.current.get(icon) : undefined;
@@ -262,21 +303,21 @@ export default function CityMap(props: Props) {
         const imageId = icon && image
           ? shopMarkerId(p.id, mapName, icon + "|" + signature + (gem?"|gem":""))
           : shopMarkerId(p.id, mapName, "discovery-" + group + "-" + gem);
-        if (!map.current!.hasImage(imageId)) {
+        if (!instance.hasImage(imageId)) {
           try {
             const marker = icon && image
               ? drawShopMarker(image, mapName, signature, {verifiedGem:gem})
               : drawDiscoveryMarker(mapName, group, gem);
-            map.current!.addImage(imageId,marker,{pixelRatio:3});
+            instance.addImage(imageId,marker,{pixelRatio:3});
           } catch (error) {
             console.warn("Could not render illustrated place marker:",error);
             return [];
           }
         }
         const compactId=icon&&image?"food-overview-"+icon:imageId;
-        if(icon&&image&&!map.current!.hasImage(compactId)){
+        if(icon&&image&&!instance.hasImage(compactId)){
           try {
-            map.current!.addImage(compactId,drawCompactShopMarker(image),{pixelRatio:3});
+            instance.addImage(compactId,drawCompactShopMarker(image),{pixelRatio:3});
           } catch(error) {
             console.warn("Could not render compact food icon:",error);
           }
@@ -291,12 +332,18 @@ export default function CityMap(props: Props) {
             id: p.id,
             name: p.name,
             icon: imageId,
-            iconCompact: map.current!.hasImage(compactId) ? compactId : imageId,
+            iconCompact: instance.hasImage(compactId) ? compactId : imageId,
+            fullCard: fullNameCard(p, zoom),
+            priority: prominenceScore(p),
           },
         }];
       }),
-    });
-  }, [props.places, ready]);
+      });
+    };
+    syncPlaces();
+    instance.on("zoomend", syncPlaces);
+    return () => { instance.off("zoomend", syncPlaces); };
+  }, [props.places, props.markerScope, ready]);
 
   // Selected marker gets a highlighted card and always paints above
   // other places. On mobile, its position stays glued to the map geometry.
@@ -304,8 +351,8 @@ export default function CityMap(props: Props) {
     const instance=map.current;
     if(!ready||!instance)return;
     const filter:["!=",["get",string],string]=["!=",["get","id"],props.selected?.id||""];
-    instance.setFilter(PLACE_ICON_LAYER,filter);
-    instance.setFilter(COMPACT_ICON_LAYER,filter);
+    instance.setFilter(PLACE_ICON_LAYER,["all",filter,["==",["get","fullCard"],true]]);
+    instance.setFilter(COMPACT_ICON_LAYER,["all",filter,["==",["get","fullCard"],false]]);
     const selectedSource=instance.getSource("aaspaas-selected-place") as GeoJSONSource|undefined;
     if(!selectedSource)return;
     const p=props.selected;

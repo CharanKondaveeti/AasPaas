@@ -41,10 +41,10 @@ test("map draws whole illustrated shop pills in one selectable GPU layer", () =>
   const code=readFileSync("src/features/map/components/CityMap.tsx","utf8");
   for(const needle of [
     'source: "aaspaas-places"',
-    'minzoom: PLACE_ICON_MIN_ZOOM',
+    'minzoom: 7.8',
     '"icon-image": ["get", "icon"]',
     '"icon-anchor": "bottom"',
-    '"icon-allow-overlap": false',
+    '"icon-allow-overlap": true',
     'drawShopMarker(image, mapName, signature, {verifiedGem:gem})',
     'shopMarkerId(p.id, mapName, icon + "|" + signature',
     'for (const layer of [PLACE_ICON_LAYER,COMPACT_ICON_LAYER,SELECTED_ICON_LAYER])',
