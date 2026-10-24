@@ -48,8 +48,9 @@ export type Place = {
   listing_verified_at?: string | null;
   verification_notes?: string | null;
   created_at?: string;
-  /** True ONLY for the deliberately fictional, isolated Famous Food preview. */
+  /** True for unverified test records stored in the canonical places table. */
   is_demo?: boolean;
+  demo_fixture_id?: string | null;
   demo_price_inr?: number;
   demo_diet?: "veg" | "non_veg";
   demo_style?: string;

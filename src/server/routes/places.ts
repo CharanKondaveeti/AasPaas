@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       group = p.get("group") || "all",
       hiddenOnly = p.get("hidden") === "1",
       budgetText = p.get("budget") || "", budget=budgetText?Number(budgetText):null,
-      hours=p.get("hours")||"any",diet=p.get("diet")||"any",style=p.get("style")||"any";
+      hours=p.get("hours")||"any",diet=p.get("diet")||"any",style=p.get("style")||"any", sampleMode=p.get("preview")==="1" && group==="food";
     if(budget!==null&&![50,100,200,500].includes(budget))throw new ApiError(400,"Invalid budget.");
     if(!["any","open_now","late_night","early_morning"].includes(hours))throw new ApiError(400,"Invalid hour filter.");
     if(!["any","veg","non_veg","egg"].includes(diet))throw new ApiError(400,"Invalid diet filter.");
@@ -25,6 +25,7 @@ export async function GET(request: Request) {
     if (!["all", "food", "experiences", "specialty_shops"].includes(group))
       throw new ApiError(400, "Invalid discovery group.");
     if (!backendReady()) {
+      if(sampleMode)throw new ApiError(503,"Preview requires the database.");
       const places = seedPlaces.filter(
         (v) =>
           (q ||
@@ -45,16 +46,19 @@ export async function GET(request: Request) {
       return Response.json({ places, mode: "curated", truncated: false });
     }
     const location={west:bounds[0],south:bounds[1],east:bounds[2],north:bounds[3],search_text:q};
-    const {data,error}=group==="food"
+    const {data,error}=sampleMode
+      ? await db().rpc("explore_demo_food",{...location,filter_dish:dish,filter_budget:budget,
+         filter_hours:hours,filter_diet:diet,filter_style:style,only_hidden_gems:hiddenOnly})
+      : group==="food"
       ? await db().rpc("explore_famous_food",{...location,filter_dish:dish,filter_budget:budget,
          filter_hours:hours,filter_diet:diet,filter_style:style,only_hidden_gems:hiddenOnly})
       : await db().rpc("explore_discoveries",{...location,filter_category:category,filter_dish:dish,
          filter_group:group,only_hidden_gems:hiddenOnly});
     if (error) throw error;
     return Response.json({
-      places: data.slice(0, 300),
-      mode: "live",
-      truncated: data.length > 300,
+      places: data.slice(0, sampleMode?180:300),
+      mode: sampleMode?"sample":"live",
+      truncated: data.length >= (sampleMode?180:301),
     });
   } catch (error) {
     return failure(error);
