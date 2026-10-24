@@ -326,7 +326,7 @@ export default function CityMap(props: Props) {
     };
     syncPlaces();
     instance.on("zoomend", syncPlaces);
-    return () => instance.off("zoomend", syncPlaces);
+    return () => { instance.off("zoomend", syncPlaces); };
   }, [props.places, props.markerScope, ready]);
 
   // Selected marker gets a highlighted card and always paints above
