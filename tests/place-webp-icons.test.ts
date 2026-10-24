@@ -1,17 +1,25 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import sharp from "sharp";
 import { iconNames, iconFor, iconPath } from "../src/features/map/layers/icons.ts";
 
-test("the ten new food illustrations are valid small transparent-capable WebP files", () => {
+test("ten new 512px illustrated WebPs are sharp and transparent", async () => {
   assert.equal(iconNames.length, 10);
   assert.equal(new Set(iconNames).size, 10);
   assert.ok(readdirSync("public/icons", { recursive: true }).every((file) => !String(file).endsWith(".svg")), "old SVG icons have been removed");
+  assert.ok(!existsSync("public/food-illustrations"), "remove old tiny duplicate art");
+  assert.ok(!existsSync("public/icons/illustrated"), "remove obsolete low-resolution map art");
   for (const name of iconNames) {
     const data = readFileSync("public" + iconPath(name));
     assert.equal(data.toString("ascii",0,4), "RIFF");
     assert.equal(data.toString("ascii",8,12), "WEBP");
-    assert.ok(data.byteLength > 1000 && data.byteLength < 12000);
+    assert.ok(data.byteLength >= 30_000 && data.byteLength < 180_000, name + " should be high-resolution and optimized");
+    const meta = await sharp(data).metadata();
+    assert.equal(meta.format, "webp");
+    assert.equal(meta.width, 512);
+    assert.equal(meta.height, 512);
+    assert.equal(meta.hasAlpha, true);
   }
 });
 
@@ -64,8 +72,8 @@ test("details gracefully handle missing food icon and photo URLs", () => {
   assert.ok(detail.includes("function DetailPhoto"));
   assert.ok(detail.includes("function DetailFoodIcon"));
   assert.ok(detail.includes('onError={() => setFailed(true)}'));
-  assert.ok(detail.includes('onError={() => {'));
-  assert.ok(detail.includes('food-illustrations/'));
+  assert.ok(detail.includes('onError={() => setFailed(true)}'));
+  assert.ok(!detail.includes('food-illustrations/'));
   assert.ok(detail.includes('encodeURIComponent(id)'));
   assert.ok(detail.includes('key={place.id + icon}'));
 });

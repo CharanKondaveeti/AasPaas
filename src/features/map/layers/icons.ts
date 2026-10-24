@@ -24,5 +24,5 @@ export function iconFor(
 }
 
 export function iconPath(name: PlaceIcon): string {
-  return `${import.meta.env?.BASE_URL ?? "/"}icons/illustrated/${name}.webp`;
+  return `${import.meta.env?.BASE_URL ?? "/"}icons/illustrated-hd/${name}.webp`;
 }
