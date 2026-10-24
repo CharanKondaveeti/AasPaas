@@ -47,6 +47,7 @@ export default function ExplorePage() {
     [foodFilters, setFoodFilters] = useState<FoodFiltersState>(emptyFoodFilters),
     [sampleMode, setSampleMode] = useState(false),
     [places, setPlaces] = useState<Place[]>([]),
+    [resultsScope, setResultsScope] = useState(""),
     [selected, setSelected] = useState<Place | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
@@ -71,6 +72,10 @@ export default function ExplorePage() {
       setShowList(true);
     }
   }, []);
+  // The map should never reuse a previously fetched category's marker history.
+  const markerScope = JSON.stringify([
+    query, category, group, hiddenOnly, dish, foodFilters, sampleMode,
+  ]);
   const updateBounds = useCallback((b: Bounds) => setBounds(b), []);
   useEffect(() => {
     const abort = new AbortController();
@@ -87,6 +92,7 @@ export default function ExplorePage() {
       && cityBounds[1] <= cityBounds[3];
     if (!intersectsCity && !query.trim()) {
       setPlaces([]);
+      setResultsScope(markerScope);
       setLoading(false);
       setTruncated(false);
       setError("");
@@ -97,6 +103,7 @@ export default function ExplorePage() {
       getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, group, hiddenOnly, abort.signal, group === "food" ? foodFilters : undefined, sampleMode)
         .then((data) => {
           setPlaces(data.places);
+          setResultsScope(markerScope);
           setMode(data.mode);
           setTruncated(data.truncated);
           setError("");
@@ -112,7 +119,7 @@ export default function ExplorePage() {
       clearTimeout(timer);
       abort.abort();
     };
-  }, [bounds, query, category, dish, group, hiddenOnly, foodFilters, sampleMode, retry]);
+  }, [bounds, query, category, dish, group, hiddenOnly, foodFilters, sampleMode, retry, markerScope]);
   function select(p: Place) {
     setSelected(p);
     setShowList(false);
@@ -120,7 +127,8 @@ export default function ExplorePage() {
   return (
     <main className="explore">
       <Suspense fallback={<div className="map-loading">Opening Hyderabad…</div>}><CityMap
-        places={places}
+        places={resultsScope === markerScope ? places : []}
+        markerScope={markerScope}
         selected={selected}
         onSelect={select}
         onBounds={updateBounds}
