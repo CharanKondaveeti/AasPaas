@@ -5,17 +5,18 @@ import { CITY_CENTER } from "../src/lib/types.ts";
 import { containsHyderabad, INDIA_MIN_ZOOM, HYDERABAD_OVERVIEW_ZOOM } from "../src/features/map/layers/indiaRegions.ts";
 import type { MultiPolygon } from "geojson";
 
-test("India map keeps navigation and geographic labels without any POI sprites", () => {
+test("India map keeps navigation and reveals only actual place icons at close zoom", () => {
   assert.ok(INDIA_MIN_ZOOM < 5);
   assert.ok(HYDERABAD_OVERVIEW_ZOOM > INDIA_MIN_ZOOM);
   const map = readFileSync("src/features/map/components/CityMap.tsx", "utf8");
   assert.match(map, /minZoom: INDIA_MIN_ZOOM/);
   assert.match(map, /renderWorldCopies: false/);
   assert.ok(map.includes('loadIndiaRegions(abort.signal)'));
+  assert.ok(map.includes('minzoom: PLACE_ICON_MIN_ZOOM'));
+  assert.ok(map.includes('type: "symbol"'));
   for (const artwork of ["galli-greenery-base", "cluster-icon-left", "cluster-icon-middle",
-    "cluster-icon-right", "place-icons", "bushy-green-pattern", "loadGeneratedScenery",
-    'addSource("places"', "GREENERY_ASSETS"]) {
-    assert.ok(!map.includes(artwork), "map has no decoration: " + artwork);
+    "cluster-icon-right", "bushy-green-pattern", "loadGeneratedScenery", "GREENERY_ASSETS"]) {
+    assert.ok(!map.includes(artwork), "map has no unused scenery: " + artwork);
   }
 });
 

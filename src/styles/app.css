@@ -537,6 +537,14 @@ img {
 .detail-body {
   padding: 26px;
 }
+/* Same tiny illustration used on the map and in the place list. */
+.detail-place-icon {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin: 0 0 10px;
+}
 .detail-body .eyebrow {
   margin-bottom: 10px;
 }
