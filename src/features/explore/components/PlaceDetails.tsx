@@ -1,6 +1,37 @@
+import { useState } from "react";
 import { ArrowUpRight, MapPin, Clock, Wallet, X } from "lucide-react";
 import type { Place } from "@/lib/types";
 import { iconFor, iconPath } from "@/features/map/layers/icons";
+/** Fall back gracefully when a photo or an illustration is unavailable. */
+function DetailPhoto({ id, name }: { id: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  return failed ? (
+    <span>Discover Hyderabad</span>
+  ) : (
+    <img
+      src={`/api/photos?id=${encodeURIComponent(id)}`}
+      alt={name}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+function DetailFoodIcon({ icon }: { icon: NonNullable<ReturnType<typeof iconFor>> }) {
+  const [fallback, setFallback] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  const fallbackPath = `${import.meta.env?.BASE_URL ?? "/"}food-illustrations/${icon}.webp`;
+  return (
+    <img
+      className="detail-place-icon"
+      src={fallback ? fallbackPath : iconPath(icon)}
+      alt=""
+      onError={() => {
+        if (!fallback) setFallback(true);
+        else setFailed(true);
+      }}
+    />
+  );
+}
 export default function PlaceDetails({
   place,
   onClose,
@@ -21,19 +52,16 @@ export default function PlaceDetails({
         className={`place-cover ${place.category === "Nature" ? "nature-cover" : ""}`}
       >
         {place.photo_path ? (
-          <img src={`/api/photos?id=${place.id}`} alt={place.name} />
+          <DetailPhoto key={place.id} id={place.id} name={place.name} />
         ) : (
           <span>Discover Hyderabad</span>
         )}
       </div>
       <div className="detail-body">
-        {iconFor(place.category, place.dish, place.name, place.famous_for) && (
-          <img
-            className="detail-place-icon"
-            src={iconPath(iconFor(place.category, place.dish, place.name, place.famous_for)!)}
-            alt=""
-          />
-        )}
+        {(() => {
+          const icon = iconFor(place.category, place.dish, place.name, place.famous_for);
+          return icon ? <DetailFoodIcon key={place.id + icon} icon={icon} /> : null;
+        })()}
         <span className="eyebrow">
           {place.category} {place.dish && ` / ${place.dish}`}
         </span>
