@@ -26,6 +26,39 @@ export type SceneryCollection = {
   features: DecorationFeature[];
 };
 
+/** Keep the map airy, while distributing greenery between parks.
+ * Stable IDs and coordinates mean the exact same selected trees persist
+ * through every zoom, drag and reload.
+ */
+export const MAX_VISIBLE_TREES = 600;
+export function selectSparseGreenery<T extends {properties:{id:string};geometry:{coordinates:[number,number]}}>(
+  features: T[], max = MAX_VISIBLE_TREES,
+): T[] {
+  if (features.length <= max) return features;
+  const groups = new Map<string,T[]>();
+  for (const feature of features) {
+    const group = /^osm-(\\d+)-/.exec(feature.properties.id)?.[1] ?? feature.properties.id;
+    const existing = groups.get(group) ?? [];
+    existing.push(feature);
+    groups.set(group, existing);
+  }
+  // Give each mapped park an opportunity before choosing second/third trees.
+  const ordered = [...groups].sort(([a],[b]) => a.localeCompare(b))
+    .map(([,items]) => items.sort((a,b) => a.properties.id.localeCompare(b.properties.id)));
+  const result:T[]=[];
+  for(let round=0;result.length<max;round++){
+    let any=false;
+    for(const items of ordered){
+      if(round>=items.length) continue;
+      any=true;
+      result.push(items[round]);
+      if(result.length===max)break;
+    }
+    if(!any)break;
+  }
+  return result;
+}
+
 /**
  * Accept checked geographic park/wood coordinates produced by map:scenery.
  * Normalize old static tree-sprite-a/b files to the new curated WebP sprites,
@@ -54,7 +87,7 @@ export async function loadGeneratedScenery(signal: AbortSignal): Promise<Scenery
     });
     if (features.length >= 3200) break;
   }
-  return features.length ? { type: "FeatureCollection", features } : null;
+  return features.length ? { type: "FeatureCollection", features: selectSparseGreenery(features) } : null;
 }
 
 /**
@@ -88,5 +121,5 @@ export function makeCityScenery(places: Place[]): SceneryCollection {
       });
     }
   }
-  return { type: "FeatureCollection", features };
+  return { type: "FeatureCollection", features: selectSparseGreenery(features) };
 }
