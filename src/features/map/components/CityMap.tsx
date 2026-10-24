@@ -98,7 +98,7 @@ export default function CityMap(props: Props) {
             for (const result of loadedIcons) {
               if (result.status !== "fulfilled") continue;
               const { name, image } = result.value;
-              if (!instance.hasImage(name)) instance.addImage(name, image, { pixelRatio: 2 });
+              if (!instance.hasImage(name)) instance.addImage(name, image, { pixelRatio: 1 });
             }
             instance.addSource("aaspaas-places", {
               type: "geojson",
@@ -110,10 +110,9 @@ export default function CityMap(props: Props) {
               source: "aaspaas-places",
               minzoom: PLACE_ICON_MIN_ZOOM,
               layout: {
-                // WebP icons are 128px and added with pixelRatio 2,
-                // giving ~55px miniature dishes, anchored at real coordinates.
+                // 48px WebP icons appear near 41px on-screen; no zoom resizing.
                 "icon-image": ["get", "icon"],
-                "icon-size": 0.86,
+                "icon-size": 0.85,
                 "icon-anchor": "bottom",
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
