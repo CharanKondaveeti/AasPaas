@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { ArrowUpRight, MapPin, Clock, Wallet, X, Gem, BadgeCheck, Bookmark, Share2, Utensils } from "lucide-react";
 import { isVerifiedGem, type Place } from "@/lib/types";
-import { iconFor, iconPath } from "@/features/map/layers/icons";
-import { foodCategories, foodArtwork } from "@/features/food/data/foodCatalog";
+import { iconFor, iconPath, storedIconPath } from "@/features/map/layers/icons";
+import { foodCategories, foodArtwork, foodArtworkFallback } from "@/features/food/data/foodCatalog";
 import { foodOpenNow, emptyFoodDetails, type CuratedFoodDetails } from "@/features/food/foodService";
 import { getFoodDetails } from "@/services/placeService";
 /** Fall back gracefully when a photo or an illustration is unavailable. */
@@ -22,11 +22,12 @@ function DetailFoodIcon({ icon }: { icon: NonNullable<ReturnType<typeof iconFor>
   const [failed, setFailed] = useState(false);
   // Only display the new high-definition illustration. Never fall back
   // to obsolete 128px artwork, which made detail views appear blurry.
-  if (failed) return null;
+  // Only return null if both the uploaded art and bundled fallback fail.
+  if (failed && !storedIconPath(icon)) return null;
   return (
     <img
       className="detail-place-icon"
-      src={iconPath(icon)}
+      src={failed ? iconPath(icon) : (storedIconPath(icon) ?? iconPath(icon))}
       alt=""
       onError={() => setFailed(true)}
     />
@@ -79,7 +80,7 @@ export default function PlaceDetails({
       >
         {place.is_demo ? (
           <div className="demo-detail-cover">
-            <img src={foodArtwork(foodCategories.find(c=>c.key===place.dish)?.icon??"biryani")} alt="Illustrative food artwork"/>
+            <img src={foodArtwork(foodCategories.find(c=>c.key===place.dish)?.icon??"biryani")} alt="Illustrative food artwork" onError={e=>{const fallback=foodArtworkFallback(foodCategories.find(c=>c.key===place.dish)?.icon??"biryani");if(!e.currentTarget.src.endsWith(fallback))e.currentTarget.src=fallback;}}/>
             <strong>PREVIEW ONLY</strong>
           </div>
         ) : place.photo_path ? (
@@ -139,7 +140,7 @@ export default function PlaceDetails({
             {food.dishes.length>0?food.dishes.map(d=>{
               const art=imageForDish(d.dish_key);
               return <div className="food-dish-row" key={d.dish_key}>
-               {art?<img src={foodArtwork(art)} alt=""/>:<Utensils size={24} color="#9D7953"/>}
+               {art?<img src={foodArtwork(art)} alt="" onError={e=>{const fallback=foodArtworkFallback(art);if(!e.currentTarget.src.endsWith(fallback))e.currentTarget.src=fallback;}}/>:<Utensils size={24} color="#9D7953"/>}
                <span>{d.dish_name}<small>{d.is_signature?"Signature dish · ":""}{d.diet==="veg"?"Vegetarian":d.diet==="non_veg"?"Non-veg":d.diet==="egg"?"Contains egg":"Diet not confirmed"}</small></span>
                {d.price_inr!==null&&<strong>₹{Number(d.price_inr).toLocaleString("en-IN")}</strong>}
               </div>;
