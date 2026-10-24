@@ -28,6 +28,12 @@ export function iconFor(
   return null;
 }
 
+/** Public Supabase artwork. An icon may not be uploaded yet; callers fall back to iconPath(). */
+export function storedIconPath(name: string): string | null {
+  const base = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+  return base ? `${base}/storage/v1/object/public/category-icons/v1/${encodeURIComponent(name)}.webp` : null;
+}
+
 export function iconPath(name: PlaceIcon): string {
   return svgArt.has(name)
     ? `${import.meta.env?.BASE_URL ?? "/"}food-art/${name}.svg`
