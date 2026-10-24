@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { CITY_CENTER } from "../src/lib/types.ts";
 import { containsHyderabad, INDIA_MIN_ZOOM, HYDERABAD_OVERVIEW_ZOOM } from "../src/features/map/layers/indiaRegions.ts";
 import type { MultiPolygon } from "geojson";
-import { selectVisiblePlaces } from "../src/features/map/layers/markerPersistence.ts";
+import { mergePanCandidates, selectVisiblePlaces } from "../src/features/map/layers/markerPersistence.ts";
+import { needsViewportFetch, paddedBounds } from "../src/features/explore/data/viewport.ts";
 import { fullNameCard, minMarkerDistance, prominenceScore, revealZoom } from "../src/features/map/layers/prominence.ts";
 
 test("India map keeps navigation and reveals only actual place icons at close zoom", () => {
@@ -19,7 +20,9 @@ test("India map keeps navigation and reveals only actual place icons at close zo
   assert.ok(map.includes('fullCard: fullNameCard(p, zoom)'));
   assert.ok(map.includes('fadeDuration: 0'));
   assert.ok(map.includes('instance.on("zoomend", syncPlaces)'));
-  assert.ok(map.includes('instance.on("moveend", syncPlaces)'));
+  assert.ok(!map.includes('instance.on("moveend", syncPlaces)'));
+  assert.ok(map.includes("mergePanCandidates("));
+  assert.ok(map.includes("panCandidates.current.get(id)"));
   assert.ok(!map.includes('seenPlaces.current'));
   assert.ok(!map.includes('keepRevealedPlaces'));
   assert.ok(map.includes('"icon-allow-overlap": true'));
@@ -111,4 +114,35 @@ test("outside-viewport places are not rendered after moving the map", () => {
   const b = { id: "outside", latitude: 17.43, longitude: 78.52, prominence_score: 95 };
   assert.deepEqual(selectVisiblePlaces([a,b], 9.9, p => p.id === "near"), [a]);
   assert.deepEqual(selectVisiblePlaces([a,b], 9.9, p => p.id === "outside"), [b]);
+});
+
+test("short drags stay inside prefetched bounds without new RPCs", () => {
+  const initial: [number,number,number,number] = [78.4, 17.3, 78.5, 17.4];
+  const loaded = paddedBounds(initial);
+  assert.ok(loaded[0] < initial[0] && loaded[2] > initial[2]);
+  assert.equal(needsViewportFetch(initial, loaded), false);
+  assert.equal(needsViewportFetch([78.42,17.31,78.52,17.41], loaded), false);
+  assert.equal(needsViewportFetch([78.5,17.4,78.6,17.5], loaded), true);
+});
+
+test("panning retains nearby fetched candidates but zoom still removes low priority", () => {
+  const high = { id:"high",latitude:17.36,longitude:78.47,prominence_score:95 };
+  const local = { id:"local",latitude:17.37,longitude:78.48,prominence_score:45 };
+  const next = { id:"next",latitude:17.38,longitude:78.49,prominence_score:65 };
+  const nearby = (p: typeof high) => p.longitude < 78.5;
+  const first = mergePanCandidates(new Map(), [high,local], nearby);
+  const afterPan = mergePanCandidates(first, [next], nearby);
+  assert.deepEqual([...afterPan.keys()], ["high","local","next"]);
+  assert.deepEqual(selectVisiblePlaces([...afterPan.values()], 9.9, () => true).map(p=>p.id), ["high"]);
+  assert.deepEqual(selectVisiblePlaces([...afterPan.values()], 14, () => true).map(p=>p.id), ["local","next","high"]);
+  const far = mergePanCandidates(afterPan, [], p => p.longitude > 78.48);
+  assert.deepEqual([...far.keys()], ["next"]);
+});
+
+test("map updates source on data/zoom changes, not on every drag", () => {
+  const map = readFileSync("src/features/map/components/CityMap.tsx", "utf8");
+  const page = readFileSync("src/features/explore/components/ExplorePage.tsx", "utf8");
+  assert.match(map, /instance\.on\("zoomend", syncPlaces\)/);
+  assert.doesNotMatch(map, /instance\.on\("moveend", syncPlaces\)/);
+  assert.match(page, /needsViewportFetch\(view, previous\)/);
 });
