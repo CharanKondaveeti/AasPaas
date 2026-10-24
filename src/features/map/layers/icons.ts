@@ -39,5 +39,5 @@ export function iconFor(category: Place["category"], dish: string | null): Place
 
 /** Use one asset path across map symbols, list cards, filters and details. */
 export function iconPath(name: PlaceIcon): string {
-  return `/icons/${name}.svg`;
+  return `${import.meta.env.BASE_URL}icons/${name}.svg`;
 }
