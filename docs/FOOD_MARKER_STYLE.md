@@ -28,3 +28,12 @@ made-up menu items.
 
 The optional 600-place preview still uses its separate unverified fictional
 data. It does **not** become verified by showing natural-looking shop names.
+
+## Prominence ranking (2026-10)
+- Every place has an editorial prominence score from 0–100 in the canonical Supabase places table.
+- 90+ starts at zoom 9.3; 80+ at 10.7; 65+ at 12; 50+ at 12.8; other places at 14.
+- Every revealed marker persists until zoom falls 1.5 below its initial threshold.
+- Scores 80+ ALWAYS render full illustrated name + signature dish cards from their first reveal, including city overview. Lower-ranked places use compact illustrations until zoom 13.6.
+- New cards respect viewport-based spacing, chosen by score. Existing revealed cards never vanish because of a collision or a new RPC response.
+- All records use identical priority logic, including food preview records. Admins can adjust prominence scores and add a rationale.
+- Supabase RPCs sort public places by priority before the limit; food preview ranks within each dish to retain category balance.
