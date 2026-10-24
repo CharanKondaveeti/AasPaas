@@ -48,7 +48,7 @@ test("Nimrah style includes white rounded capsule, two text lines and a single o
 test("food artwork is high-DPI, cropped, and overlaps the name pill", () => {
   const marker = readFileSync("src/features/map/layers/shopPillMarker.ts", "utf8");
   const map = readFileSync("src/features/map/components/CityMap.tsx", "utf8");
-  assert.ok(marker.includes("const SCALE = 3"));
+  assert.ok(marker.includes("const SCALE=3"));
   assert.ok(marker.includes("const ART_SIZE=77"));
   assert.ok(marker.includes("const PILL_TOP=63"));
   assert.ok(marker.includes("PILL_TOP-ART_SIZE/2+11"));
