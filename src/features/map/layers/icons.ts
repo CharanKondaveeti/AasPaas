@@ -40,12 +40,18 @@ export function iconFor(
   famousFor = "",
 ): FoodIllustration | null {
   if (category !== "Food") return null;
-  const source = [dish, name, famousFor].filter(Boolean).join(" ").toLowerCase();
-  // Prefer a specific menu-item match before a broad dish description.
+  const matches = (source: string, key: string) => {
+    const words = " " + source.toLowerCase().replace(/[^a-z]+/g, " ") + " ";
+    const term = " " + key.replace(/[^a-z]+/g, " ") + " ";
+    return words.includes(term);
+  };
+  // A tagged food dish takes priority over mentions in the shop name.
+  if (dish) {
+    const dishIcon = aliases[dish.trim().toLowerCase()];
+    if (dishIcon) return dishIcon;
+  }
   for (const [word, icon] of Object.entries(aliases)) {
-    if (new RegExp(`(?:^|[^a-z])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^a-z])`, "i").test(source)) {
-      return icon;
-    }
+    if (matches(name, word) || matches(famousFor, word)) return icon;
   }
   return null;
 }
