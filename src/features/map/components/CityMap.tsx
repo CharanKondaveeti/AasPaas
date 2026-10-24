@@ -11,7 +11,8 @@ import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, extraFoodIcons, iconPath, storedIconPath } from "../layers/icons";
 import { drawShopMarker, drawCompactShopMarker, markerDishLabel, shopMarkerId } from "../layers/shopPillMarker";
 import { drawDiscoveryMarker } from "../layers/discoveryMarker";
-import { keepRevealedPlaces, PLACE_HIDE_ZOOM } from "../layers/markerPersistence";
+import { keepRevealedPlaces } from "../layers/markerPersistence";
+import { fullNameCard, minNewMarkerDistance, prominenceScore } from "../layers/prominence";
 
 const PLACE_ICON_LAYER = "aaspaas-place-icons";
 const COMPACT_ICON_LAYER = "aaspaas-compact-food-icons";
@@ -123,8 +124,8 @@ export default function CityMap(props: Props) {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
             });
-            // At distant zoom: only the dish illustration. At street zoom:
-            // name + famous dish in one pill. No numbered clustering.
+            // Iconic places display name + speciality at city overview zoom.
+            // Lower priority places reveal progressively as the user zooms in.
             instance.addSource("aaspaas-selected-place", {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
@@ -133,11 +134,12 @@ export default function CityMap(props: Props) {
               id: COMPACT_ICON_LAYER,
               type: "symbol",
               source: "aaspaas-places",
-              minzoom: PLACE_HIDE_ZOOM,
-              maxzoom: FOOD_LABEL_MIN_ZOOM,
+              minzoom: 7.8,
+              filter: ["==", ["get", "fullCard"], false],
               layout: {
                 "icon-image": ["get", "iconCompact"],
-                "icon-size": ["interpolate",["linear"],["zoom"],10.8,0.42,12.8,0.64,13.6,0.78],
+                "icon-size": ["interpolate",["linear"],["zoom"],7.8,0.36,10.8,0.46,12.8,0.64,13.6,0.78],
+                "symbol-sort-key": ["get", "priority"],
                 "icon-anchor": "bottom",
                 "icon-offset": [0,14], // align orange dot with map coordinate
                 "icon-allow-overlap": true,
@@ -150,10 +152,12 @@ export default function CityMap(props: Props) {
               id: PLACE_ICON_LAYER,
               type: "symbol",
               source: "aaspaas-places",
-              minzoom: FOOD_LABEL_MIN_ZOOM,
+              minzoom: 7.8,
+              filter: ["==", ["get", "fullCard"], true],
               layout: {
                 "icon-image": ["get", "icon"],
-                "icon-size": ["interpolate",["linear"],["zoom"],13.6,0.66,15,0.78,18,0.85],
+                "icon-size": ["interpolate",["linear"],["zoom"],7.8,0.68,9.9,0.75,13.6,0.78,15,0.85,18,0.9],
+                "symbol-sort-key": ["get", "priority"],
                 "icon-anchor": "bottom",
                 "icon-offset": [0,16],
                 "icon-allow-overlap": true,
@@ -166,10 +170,10 @@ export default function CityMap(props: Props) {
               id: SELECTED_ICON_LAYER,
               type: "symbol",
               source: "aaspaas-selected-place",
-              minzoom: PLACE_HIDE_ZOOM,
+              minzoom: 7.8,
               layout: {
                 "icon-image": ["get", "icon"],
-                "icon-size": ["interpolate",["linear"],["zoom"],10.8,0.54,12.8,0.82,15,0.9,18,1],
+                "icon-size": ["interpolate",["linear"],["zoom"],7.8,0.7,9.9,0.78,12.8,0.82,15,0.9,18,1],
                 "icon-anchor": "bottom",
                 "icon-offset": [0,16],
                 "icon-allow-overlap": true,
@@ -260,16 +264,27 @@ export default function CityMap(props: Props) {
         lastMarkerSnapshot.current = "";
       }
       const view = instance.getBounds();
+      const zoom = instance.getZoom();
+      const minDistance = minNewMarkerDistance(zoom);
       const retained = keepRevealedPlaces(
         seenPlaces.current,
         props.places,
-        instance.getZoom(),
+        zoom,
         (place) => view.contains([place.longitude, place.latitude]),
+        (candidate, visible) => {
+          if (!minDistance) return true;
+          const point = instance.project([candidate.longitude, candidate.latitude]);
+          return visible.every(other => {
+            const existing = instance.project([other.longitude, other.latitude]);
+            return Math.hypot(point.x - existing.x, point.y - existing.y) >= minDistance;
+          });
+        },
       );
       // Repeated viewport RPC responses should not rebuild identical markers.
       const snapshot = JSON.stringify(retained.map((p) => [
         p.id, p.longitude, p.latitude, p.name, p.category,
         p.dish, p.famous_for, isVerifiedGem(p),
+        prominenceScore(p), fullNameCard(p, zoom),
       ]));
       if (snapshot === lastMarkerSnapshot.current) return;
       lastMarkerSnapshot.current = snapshot;
@@ -319,6 +334,8 @@ export default function CityMap(props: Props) {
             name: p.name,
             icon: imageId,
             iconCompact: instance.hasImage(compactId) ? compactId : imageId,
+            fullCard: fullNameCard(p, zoom),
+            priority: prominenceScore(p),
           },
         }];
       }),
