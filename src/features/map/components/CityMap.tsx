@@ -11,7 +11,7 @@ import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, extraFoodIcons, iconPath, storedIconPath } from "../layers/icons";
 import { drawShopMarker, drawCompactShopMarker, markerDishLabel, shopMarkerId } from "../layers/shopPillMarker";
 import { drawDiscoveryMarker } from "../layers/discoveryMarker";
-import { selectVisiblePlaces } from "../layers/markerPersistence";
+import { mergePanCandidates, selectVisiblePlaces } from "../layers/markerPersistence";
 import { fullNameCard, minMarkerDistance, prominenceScore } from "../layers/prominence";
 
 const PLACE_ICON_LAYER = "aaspaas-place-icons";
@@ -33,6 +33,7 @@ export default function CityMap(props: Props) {
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     foodArt = useRef<Map<string, HTMLImageElement>>(new Map()),
+    panCandidates = useRef<Map<string, Place>>(new Map()),
     lastMarkerScope = useRef(""),
     lastMarkerSnapshot = useRef(""),
     pickMarker = useRef<Marker | null>(null);
@@ -185,7 +186,8 @@ export default function CityMap(props: Props) {
                 if (latest.current.picking) return;
                 const id = e.features?.[0]?.properties?.id;
                 if (typeof id !== "string") return;
-                const place = latest.current.places.find((item) => item.id === id);
+                const place = latest.current.places.find((item) => item.id === id)
+                  ?? panCandidates.current.get(id);
                 if (place) latest.current.onSelect(place);
               });
               instance.on("mouseenter", layer, () => {
@@ -254,18 +256,32 @@ export default function CityMap(props: Props) {
     const source = instance.getSource("aaspaas-places") as GeoJSONSource | undefined;
     if (!source) return;
     const syncPlaces = () => {
-      // A filter change invalidates the rendered snapshot, not a marker memory.
+      // Only filters clear the candidate cache. Panning must NOT erase the
+      // previously loaded markers while the next viewport RPC is in flight.
       if (lastMarkerScope.current !== props.markerScope) {
         lastMarkerScope.current = props.markerScope;
+        panCandidates.current.clear();
         lastMarkerSnapshot.current = "";
       }
       const view = instance.getBounds();
       const zoom = instance.getZoom();
+      const width = view.getEast() - view.getWest();
+      const height = view.getNorth() - view.getSouth();
+      // Keep a geographic buffer around the viewport, so icons enter the
+      // screen already loaded instead of popping in after each drag.
+      const inBuffer = (p: Place) =>
+        p.longitude >= view.getWest() - width &&
+        p.longitude <= view.getEast() + width &&
+        p.latitude >= view.getSouth() - height &&
+        p.latitude <= view.getNorth() + height;
+      panCandidates.current = mergePanCandidates(
+        panCandidates.current, props.places, inBuffer,
+      );
       const minDistance = minMarkerDistance(zoom);
       const visible = selectVisiblePlaces(
-        props.places,
+        [...panCandidates.current.values()],
         zoom,
-        (place) => view.contains([place.longitude, place.latitude]),
+        inBuffer,
         (candidate, visible) => {
           const point = instance.project([candidate.longitude, candidate.latitude]);
           return visible.every(other => {
@@ -274,7 +290,8 @@ export default function CityMap(props: Props) {
           });
         },
       );
-      // Zooming OUT immediately drops lower-priority places and re-applies spacing.
+      // Zooming OUT still drops lower-priority places. Panning retains only
+      // nearby fetched candidates, not permanently revealed markers.
       const snapshot = JSON.stringify(visible.map((p) => [
         p.id, p.longitude, p.latitude, p.name, p.category,
         p.dish, p.famous_for, isVerifiedGem(p),
@@ -336,12 +353,11 @@ export default function CityMap(props: Props) {
       });
     };
     syncPlaces();
+    // NEVER rebuild map symbols just because the camera panned. MapLibre
+    // already moves GPU symbols smoothly. Fetch results and zoom changes are
+    // the only reasons to update source data.
     instance.on("zoomend", syncPlaces);
-    instance.on("moveend", syncPlaces);
-    return () => {
-      instance.off("zoomend", syncPlaces);
-      instance.off("moveend", syncPlaces);
-    };
+    return () => { instance.off("zoomend", syncPlaces); };
   }, [props.places, props.markerScope, ready]);
 
   // Selected marker gets a highlighted card and always paints above

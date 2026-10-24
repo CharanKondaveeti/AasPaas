@@ -29,3 +29,29 @@ export function selectVisiblePlaces<T extends LocatedPlace>(
   // Draw less important places first; important markers win the top position.
   return visible.reverse();
 }
+
+/**
+ * Keep fetched candidates while the user pans, not "revealed" marker visibility.
+ * The map still runs selectVisiblePlaces at the current zoom, so zooming out
+ * cannot accumulate cards. Prune only far-off records to bound memory usage.
+ */
+export function mergePanCandidates<T extends LocatedPlace>(
+  previous: ReadonlyMap<string, T>,
+  incoming: readonly T[],
+  withinBuffer: (place: T) => boolean,
+  limit = 900,
+): Map<string, T> {
+  const merged = new Map<string, T>();
+  for (const [id, place] of previous) {
+    if (withinBuffer(place)) merged.set(id, place);
+  }
+  for (const place of incoming) {
+    if (Number.isFinite(place.longitude) && Number.isFinite(place.latitude) && withinBuffer(place))
+      merged.set(place.id, place);
+  }
+  if (merged.size <= limit) return merged;
+  const top = [...merged.values()].sort(
+    (a, b) => prominenceScore(b) - prominenceScore(a) || a.id.localeCompare(b.id),
+  ).slice(0, limit);
+  return new Map(top.map(p => [p.id, p]));
+}
