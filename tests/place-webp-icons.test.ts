@@ -55,5 +55,17 @@ test("place list and details use new illustrations without broken nonfood images
   const detail=readFileSync("src/features/explore/components/PlaceDetails.tsx","utf8");
   assert.ok(list.includes("iconPath(iconFor(p.category, p.dish, p.name, p.famous_for)!)"));
   assert.ok(list.includes('<MapPin size={19}'));
-  assert.ok(detail.includes("iconPath(iconFor(place.category, place.dish, place.name, place.famous_for)!)"));
+  assert.ok(detail.includes("iconPath(icon)"));
+  assert.ok(detail.includes("iconFor(place.category, place.dish, place.name, place.famous_for)"));
+});
+
+test("details gracefully handle missing food icon and photo URLs", () => {
+  const detail = readFileSync("src/features/explore/components/PlaceDetails.tsx", "utf8");
+  assert.ok(detail.includes("function DetailPhoto"));
+  assert.ok(detail.includes("function DetailFoodIcon"));
+  assert.ok(detail.includes('onError={() => setFailed(true)}'));
+  assert.ok(detail.includes('onError={() => {'));
+  assert.ok(detail.includes('food-illustrations/'));
+  assert.ok(detail.includes('encodeURIComponent(id)'));
+  assert.ok(detail.includes('key={place.id + icon}'));
 });
