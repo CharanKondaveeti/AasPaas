@@ -11,8 +11,8 @@ import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, extraFoodIcons, iconPath, storedIconPath } from "../layers/icons";
 import { drawShopMarker, drawCompactShopMarker, markerDishLabel, shopMarkerId } from "../layers/shopPillMarker";
 import { drawDiscoveryMarker } from "../layers/discoveryMarker";
-import { keepRevealedPlaces } from "../layers/markerPersistence";
-import { fullNameCard, minNewMarkerDistance, prominenceScore } from "../layers/prominence";
+import { selectVisiblePlaces } from "../layers/markerPersistence";
+import { fullNameCard, minMarkerDistance, prominenceScore } from "../layers/prominence";
 
 const PLACE_ICON_LAYER = "aaspaas-place-icons";
 const COMPACT_ICON_LAYER = "aaspaas-compact-food-icons";
@@ -33,7 +33,6 @@ export default function CityMap(props: Props) {
     map = useRef<LibreMap | null>(null),
     latest = useRef(props),
     foodArt = useRef<Map<string, HTMLImageElement>>(new Map()),
-    seenPlaces = useRef<Map<string, Place>>(new Map()),
     lastMarkerScope = useRef(""),
     lastMarkerSnapshot = useRef(""),
     pickMarker = useRef<Marker | null>(null);
@@ -186,8 +185,7 @@ export default function CityMap(props: Props) {
                 if (latest.current.picking) return;
                 const id = e.features?.[0]?.properties?.id;
                 if (typeof id !== "string") return;
-                const place = latest.current.places.find((item) => item.id === id)
-                  ?? seenPlaces.current.get(id);
+                const place = latest.current.places.find((item) => item.id === id);
                 if (place) latest.current.onSelect(place);
               });
               instance.on("mouseenter", layer, () => {
@@ -256,22 +254,19 @@ export default function CityMap(props: Props) {
     const source = instance.getSource("aaspaas-places") as GeoJSONSource | undefined;
     if (!source) return;
     const syncPlaces = () => {
-      // Clear remembered places when filters or preview mode change.
+      // A filter change invalidates the rendered snapshot, not a marker memory.
       if (lastMarkerScope.current !== props.markerScope) {
         lastMarkerScope.current = props.markerScope;
-        seenPlaces.current.clear();
         lastMarkerSnapshot.current = "";
       }
       const view = instance.getBounds();
       const zoom = instance.getZoom();
-      const minDistance = minNewMarkerDistance(zoom);
-      const retained = keepRevealedPlaces(
-        seenPlaces.current,
+      const minDistance = minMarkerDistance(zoom);
+      const visible = selectVisiblePlaces(
         props.places,
         zoom,
         (place) => view.contains([place.longitude, place.latitude]),
         (candidate, visible) => {
-          if (!minDistance) return true;
           const point = instance.project([candidate.longitude, candidate.latitude]);
           return visible.every(other => {
             const existing = instance.project([other.longitude, other.latitude]);
@@ -279,8 +274,8 @@ export default function CityMap(props: Props) {
           });
         },
       );
-      // Repeated viewport RPC responses should not rebuild identical markers.
-      const snapshot = JSON.stringify(retained.map((p) => [
+      // Zooming OUT immediately drops lower-priority places and re-applies spacing.
+      const snapshot = JSON.stringify(visible.map((p) => [
         p.id, p.longitude, p.latitude, p.name, p.category,
         p.dish, p.famous_for, isVerifiedGem(p),
         prominenceScore(p), fullNameCard(p, zoom),
@@ -289,7 +284,7 @@ export default function CityMap(props: Props) {
       lastMarkerSnapshot.current = snapshot;
       source.setData({
       type: "FeatureCollection",
-      features: retained.flatMap((p) => {
+      features: visible.flatMap((p) => {
         if (!Number.isFinite(p.longitude) || !Number.isFinite(p.latitude)) return [];
         const icon = iconFor(p.category, p.dish, p.name, p.famous_for);
         const image = icon ? foodArt.current.get(icon) : undefined;
@@ -342,7 +337,11 @@ export default function CityMap(props: Props) {
     };
     syncPlaces();
     instance.on("zoomend", syncPlaces);
-    return () => { instance.off("zoomend", syncPlaces); };
+    instance.on("moveend", syncPlaces);
+    return () => {
+      instance.off("zoomend", syncPlaces);
+      instance.off("moveend", syncPlaces);
+    };
   }, [props.places, props.markerScope, ready]);
 
   // Selected marker gets a highlighted card and always paints above
