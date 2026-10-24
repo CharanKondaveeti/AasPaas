@@ -98,5 +98,6 @@ test("mobile layout, zoomed map markers and demo UI avoid oversized overlay",()=
  assert.ok(filters.includes("Demo · fictional"));
  assert.ok(!page.includes('className="sample-map-banner"'));
  assert.ok(map.includes('"icon-size": ["interpolate"'));
- assert.ok(map.includes('p.is_demo?\`Demo'));
+ assert.ok(map.includes('shopMarkerId("demo-"'));
+ assert.ok(map.includes('p.is_demo?'));
 });

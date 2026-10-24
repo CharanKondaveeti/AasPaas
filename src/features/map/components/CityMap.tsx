@@ -209,9 +209,14 @@ export default function CityMap(props: Props) {
         // Dish illustrations stay unchanged; vector pills show niche places
         // without invented food art, ugly buildings or numbered pins.
         const mapName=p.is_demo?`Demo ${p.dish||"Food"}`:p.name;
-        const imageId = icon && image
-          ? (gem ? shopMarkerId(p.id, mapName, icon + "-gem") : shopMarkerId(p.id, mapName, icon))
-          : shopMarkerId(p.id, mapName, "discovery-" + group + "-" + gem);
+        // Demo pins share one GPU sprite per food type instead of creating
+        // hundreds of identical image textures as the visitor pans the map.
+        // Feature IDs stay unique so tapping a pin still opens its own sample.
+        const imageId = p.is_demo
+          ? shopMarkerId("demo-" + (icon || group), mapName, icon || group)
+          : icon && image
+            ? (gem ? shopMarkerId(p.id, mapName, icon + "-gem") : shopMarkerId(p.id, mapName, icon))
+            : shopMarkerId(p.id, mapName, "discovery-" + group + "-" + gem);
         if (!map.current!.hasImage(imageId)) {
           try {
             const marker = icon && image
