@@ -150,7 +150,7 @@ export function drawShopMarker(art: HTMLImageElement, name: string, verifiedGem 
   const drawnWidth = Math.min(ART_SIZE, ART_SIZE * imageRatio);
   const drawnHeight = Math.min(ART_SIZE, ART_SIZE / imageRatio);
   ctx.drawImage(art, crop.x, crop.y, crop.w, crop.h,
-    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 8,
+    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 16,
     drawnWidth, drawnHeight);
 
 
