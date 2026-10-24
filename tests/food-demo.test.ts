@@ -22,7 +22,7 @@ test("600 fictional food fixtures exist: exactly 30 for each of 20 illustrated d
   assert.equal(p.source_url,null);
   assert.equal(p.photo_path,null);
   assert.equal(p.is_hidden_gem,false);
-  assert.ok(p.name.startsWith("SAMPLE "));
+  assert.ok(!/^(SAMPLE|Demo)\\b/i.test(p.name));
   assert.ok(p.latitude>=CITY_BOUNDS[1]&&p.latitude<=CITY_BOUNDS[3]);
   assert.ok(p.longitude>=CITY_BOUNDS[0]&&p.longitude<=CITY_BOUNDS[2]);
   assert.ok(p.demo_price_inr>0&&p.demo_price_inr<500);
@@ -98,6 +98,6 @@ test("mobile layout, zoomed map markers and demo UI avoid oversized overlay",()=
  assert.ok(filters.includes("Demo · fictional"));
  assert.ok(!page.includes('className="sample-map-banner"'));
  assert.ok(map.includes('"icon-size": ["interpolate"'));
- assert.ok(map.includes('shopMarkerId("demo-"'));
+ assert.ok(map.includes('shopMarkerId("preview-"'));
  assert.ok(map.includes('p.is_demo?'));
 });

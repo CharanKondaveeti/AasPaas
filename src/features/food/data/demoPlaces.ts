@@ -9,6 +9,37 @@ export const SAMPLES_PER_CATEGORY=30;
 export const EXPECTED_SAMPLE_TOTAL=foodCategories.length*SAMPLES_PER_CATEGORY;
 const demoAreas=[["Charminar",17.3614,78.4744],["Abids",17.3906,78.475],["Koti",17.3865,78.4876],["Secunderabad",17.4399,78.4983],["Himayatnagar",17.405,78.483],["Banjara Hills",17.4122,78.4481],["Jubilee Hills",17.4322,78.4071],["Madhapur",17.4486,78.3908],["Gachibowli",17.4401,78.3489],["Kondapur",17.4608,78.3674],["Mehdipatnam",17.394,78.439],["Tolichowki",17.4056,78.4119],["Begumpet",17.444,78.4624],["Dilsukhnagar",17.3688,78.5247],["Ameerpet",17.4375,78.4483]] as const;
 const demoStyles=foodStyleFilters.map(s=>s.key);
+/** Natural-looking test copy. These are fictional brands, never verified shops. */
+const sampleBrands=[
+ "Deccan","Safa","Mehfil","Shahi","Royal","Zaiqa","Dil Se","Nawab's",
+ "Masti","Mitti","Charminar Lane","Gully","Zaika","Spice Route","Tadka",
+ "Dawat","Chatori","Swaad","Dum","Nukkad","Masala","Riwaayat",
+ "Mehmaan","Nimaani","Purani Gali","Angithi","Tandoor","Ruchi","Aangan","Sultani"
+] as const;
+const sampleSuffixes=["Kitchen","Corner","House","Point","Café","Adda","Express","Bites","Centre","Junction"] as const;
+const signatureVariants:Record<string,string[]>={
+ Biryani:["Hyderabadi Chicken Dum Biryani","Mutton Dum Biryani","Veg Dum Biryani"],
+ Punugulu:["Crispy Punugulu","Onion Punugulu","Punugulu with Ginger Chutney"],
+ Tea:["Irani Chai","Dum Chai","Irani Chai with Osmania Biscuit"],
+ Dosa:["Masala Dosa","Ghee Dosa","Pesarattu Dosa"],
+ Mandi:["Chicken Mandi","Mutton Mandi","Mixed Mandi"],
+ Samosa:["Aloo Samosa","Onion Samosa","Samosa Chaat"],
+ Chaat:["Papdi Chaat","Dahi Puri","Aloo Tikki Chaat"],
+ Vada:["Medu Vada","Sambar Vada","Masala Vada"],
+ Sweets:["Kaju Katli","Motichoor Laddu","Double Ka Meetha"],
+ Idli:["Ghee Karam Idli","Steamed Idli","Sambar Idli"],
+ Haleem:["Hyderabadi Haleem","Chicken Haleem","Mutton Haleem"],
+ Kebab:["Seekh Kebab","Shami Kebab","Chicken Tikka"],
+ "Pani Puri":["Pani Puri","Dahi Puri","Masala Puri"],
+ Jalebi:["Hot Jalebi","Rabri Jalebi","Jalebi with Milk"],
+ "Mirchi Bajji":["Mirchi Bajji","Stuffed Mirchi Bajji","Cut Mirchi"],
+ "Osmania Biscuits":["Osmania Biscuits","Butter Biscuits","Tea and Osmania Biscuits"],
+ Juice:["Mosambi Juice","Fresh Watermelon Juice","Mango Shake"],
+ Tiffins:["Poori with Curry","Upma","Pesarattu"],
+ Rolls:["Chicken Kathi Roll","Paneer Roll","Egg Roll"],
+ "Ice Cream":["Kulfi","Falooda Ice Cream","Fruit Sundae"]
+};
+
 
 export type SampleFoodPlace=Place&{
  is_demo:true;
@@ -26,12 +57,13 @@ function createSamples():SampleFoodPlace[]{
    const area=demoAreas[(categoryIndex*5+n-1)%demoAreas.length];
    const overnight=n%6===0;
    const early=!overnight&&n%5===0;
-   const sampleName=`SAMPLE ${cat.key} Spot ${String(n).padStart(2,"0")}`;
+   const sampleName=`${sampleBrands[index]} ${cat.label} ${sampleSuffixes[(categoryIndex+n)%sampleSuffixes.length]}`;
+   const signature=(signatureVariants[cat.key]||[cat.label])[index%3];
    return {
     id:`demo-food-${cat.icon}-${String(n).padStart(2,"0")}`,
     name:sampleName,category:"Food" as const,dish:cat.key,discovery_group:"food" as const,
-    famous_for:`Fictional example: ${cat.label} category demo — not a real business`,
-    description:"Sample data for testing the AasPaas map and discovery filters. This place does not exist as a verified recommendation.",
+    famous_for:`Known for ${signature}`,
+    description:`A local-style food discovery card featuring ${signature}. This is a demo listing with an invented shop name and test location, not a verified business.`,
     area:area[0],latitude:area[1]+((n%5)-2)*0.00175,
     longitude:area[2]+(((n*3+categoryIndex)%7)-3)*0.0021,
     source_url:null,photo_path:null,photo_credit:null,hours:null,price:null,

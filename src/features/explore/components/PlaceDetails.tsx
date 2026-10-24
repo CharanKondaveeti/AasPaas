@@ -80,7 +80,7 @@ export default function PlaceDetails({
         {place.is_demo ? (
           <div className="demo-detail-cover">
             <img src={foodArtwork(foodCategories.find(c=>c.key===place.dish)?.icon??"biryani")} alt="Illustrative food artwork"/>
-            <strong>FICTIONAL SAMPLE</strong>
+            <strong>PREVIEW ONLY</strong>
           </div>
         ) : place.photo_path ? (
           <DetailPhoto key={place.id} id={place.id} name={place.name} />
@@ -99,7 +99,7 @@ export default function PlaceDetails({
         <h2>{place.name}</h2>
         {place.is_demo&&(
           <div className="demo-detail-notice" role="note">
-            <strong>DEMO — Not a real restaurant</strong>
+            <strong>Preview listing — unverified location</strong>
             <span>This fictional listing is for testing the interface. Its location, price and hours are examples only.</span>
           </div>
         )}
