@@ -46,6 +46,8 @@ export const editSchema = suggestionSchema
     verification_notes: text(0, 700).nullable().optional(),
     // A decision, not a caller-supplied timestamp. Server sets verified_at.
     listing_verified: z.boolean().optional(),
+    prominence_score: z.number().int().min(0).max(100).optional(),
+    prominence_reason: text(0, 300).nullable().optional(),
     status: z.enum(["pending", "approved", "rejected"]),
   })
   .strict();
