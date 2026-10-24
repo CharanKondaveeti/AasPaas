@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { SlidersHorizontal, X, Clock, Leaf, Moon, Sunrise, RotateCcw, Check, FlaskConical } from "lucide-react";
-import { foodArtwork, foodBudgets, foodCategories, foodStyleFilters } from "../data/foodCatalog";
+import { foodArtwork, foodArtworkFallback, foodBudgets, foodCategories, foodStyleFilters } from "../data/foodCatalog";
 import { emptyFoodFilters, type FoodFiltersState } from "../foodService";
 
 export default function FoodFilters({value,onChange,resultCount,loading,sampleMode,onSampleModeChange}:{
@@ -34,7 +34,7 @@ export default function FoodFilters({value,onChange,resultCount,loading,sampleMo
    {foodCategories.slice(0,10).map(item=><button key={item.key}
     className={value.dish===item.key?"selected":""} aria-pressed={value.dish===item.key}
     onClick={()=>update("dish",item.key)}>
-    <img src={foodArtwork(item.icon)} alt=""/><span>{item.label}</span>
+    <img src={foodArtwork(item.icon)} alt="" onError={e=>{const fallback=foodArtworkFallback(item.icon);if(!e.currentTarget.src.endsWith(fallback))e.currentTarget.src=fallback;}}/><span>{item.label}</span>
    </button>)}
    <button className={value.budget===100?"selected":""} onClick={()=>update("budget",100)}>₹ Under 100</button>
    <button className={value.hours==="open_now"?"selected":""} onClick={()=>update("hours","open_now")}>
@@ -61,7 +61,7 @@ export default function FoodFilters({value,onChange,resultCount,loading,sampleMo
       {foodCategories.map(item=><button key={item.key}
        className={value.dish===item.key?"selected":""} aria-pressed={value.dish===item.key}
        onClick={()=>update("dish",item.key)}>
-       <img src={foodArtwork(item.icon)} alt="" loading="lazy"/>
+       <img src={foodArtwork(item.icon)} alt="" loading="lazy" onError={e=>{const fallback=foodArtworkFallback(item.icon);if(!e.currentTarget.src.endsWith(fallback))e.currentTarget.src=fallback;}}/>
        <span>{item.label}</span>
        {value.dish===item.key&&<Check className="food-checked" size={14}/>}
       </button>)}
