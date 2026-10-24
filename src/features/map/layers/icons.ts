@@ -1,3 +1,6 @@
+import type { Place } from "@/lib/types";
+
+/** All icons are light local SVG illustrations in public/icons. */
 export const iconNames = [
   "places",
   "nature",
@@ -6,15 +9,19 @@ export const iconNames = [
   "biryani",
   "punugulu",
   "samosa",
+  "mandi",
   "chaat",
   "dosa",
   "vada",
   "tea",
   "sweets",
   "food",
-];
+] as const;
 
-const categoryIcons: Record<string, string> = {
+export type PlaceIcon = (typeof iconNames)[number];
+const knownIcons: ReadonlySet<string> = new Set(iconNames);
+
+const categoryIcons: Record<Place["category"], PlaceIcon> = {
   Places: "places",
   Nature: "nature",
   Shopping: "shopping",
@@ -22,9 +29,15 @@ const categoryIcons: Record<string, string> = {
   Food: "food",
 };
 
-/** Use a real registered sprite for every place, including uncommon dishes. */
-export function iconFor(category: string, dish: string | null) {
-  const dishIcon = dish?.trim().toLowerCase();
-  if (dishIcon && iconNames.includes(dishIcon)) return dishIcon;
-  return categoryIcons[category] || "places";
+/** A matching dish takes priority; unknown dishes get their category icon. */
+export function iconFor(category: Place["category"], dish: string | null): PlaceIcon {
+  const candidate = dish?.trim().toLowerCase();
+  return candidate && knownIcons.has(candidate)
+    ? candidate as PlaceIcon
+    : categoryIcons[category];
+}
+
+/** Use one asset path across map symbols, list cards, filters and details. */
+export function iconPath(name: PlaceIcon): string {
+  return `/icons/${name}.svg`;
 }
