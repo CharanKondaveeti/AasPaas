@@ -22,7 +22,25 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .range(offset, offset + 49);
     if (error) throw error;
-    return Response.json({ places: data });
+    // Only admins can see the full curation pipeline.
+    const { data: candidates, error: progressError } = await client
+      .from("places")
+      .select("discovery_group, listing_verified_at")
+      .eq("status", "approved")
+      .limit(1000);
+    if (progressError) throw progressError;
+    const progress: Record<string, { approved: number; verified: number }> = {
+      food: { approved: 0, verified: 0 },
+      experiences: { approved: 0, verified: 0 },
+      specialty_shops: { approved: 0, verified: 0 },
+    };
+    for (const candidate of candidates || []) {
+      const group = candidate.discovery_group as keyof typeof progress;
+      if (!progress[group]) continue;
+      progress[group].approved++;
+      if (candidate.listing_verified_at) progress[group].verified++;
+    }
+    return Response.json({ places: data, progress });
   } catch (error) {
     return failure(error);
   }
