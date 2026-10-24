@@ -11,10 +11,8 @@ import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, extraFoodIcons, iconPath, storedIconPath } from "../layers/icons";
 import { drawShopMarker, drawCompactShopMarker, markerDishLabel, shopMarkerId } from "../layers/shopPillMarker";
 import { drawDiscoveryMarker } from "../layers/discoveryMarker";
-import { keepRevealedPlaces, PLACE_REVEAL_ZOOM, PLACE_HIDE_ZOOM } from "../layers/markerPersistence";
+import { keepRevealedPlaces, PLACE_HIDE_ZOOM } from "../layers/markerPersistence";
 
-/** Reveal places when close; keep seen markers until zooming much farther out. */
-const PLACE_ICON_MIN_ZOOM = PLACE_REVEAL_ZOOM;
 const PLACE_ICON_LAYER = "aaspaas-place-icons";
 const COMPACT_ICON_LAYER = "aaspaas-compact-food-icons";
 const SELECTED_ICON_LAYER = "aaspaas-selected-food-icon";
