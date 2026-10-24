@@ -28,10 +28,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run tests
         run: npm test
@@ -44,6 +43,13 @@ jobs:
           VITE_SUPABASE_URL: "https://besbdmgryvwaqdyolmej.supabase.co"
           # Publishable browser keys are public by design; never use sb_secret_.
           VITE_SUPABASE_PUBLISHABLE_KEY: "${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_bFswqlE4m5MppRhb5T8bkQ_pVkNm8Jg' }}"
+
+      - name: Verify GitHub Pages assets
+        run: |
+          test -f dist/index.html
+          test -f dist/icons/mandi.svg
+          test -f dist/map-data/hyderabad-ghmc.geojson
+          grep -q '/AasPaas/assets/' dist/index.html
 
       - name: Add GitHub Pages fallbacks
         run: |
