@@ -11,7 +11,7 @@ WebP files smaller than 1 MB. Public download access **does not grant public upl
 
 1. Get the approved `aaspaas_20_individual_icons.zip` from this ChatGPT
    conversation and extract it.
-2. From the repository root, install the existing project dependencies (`npm ci`).
+2. From the repository root, install the existing project dependencies (`npm install`).
 3. Set `SUPABASE_URL=https://besbdmgryvwaqdyolmej.supabase.co` and
    `SUPABASE_SERVICE_ROLE_KEY` in your **local shell only**. Find the
    service role secret in Supabase project API settings. Never commit it,
