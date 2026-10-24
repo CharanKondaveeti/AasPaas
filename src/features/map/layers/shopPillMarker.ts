@@ -79,7 +79,8 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
   const measureCtx = measureCanvas.getContext("2d");
   if (!measureCtx) throw new Error("Unable to draw food map markers");
   measureCtx.font = FONT;
-  const lines = shopNameLines(name, (text) => measureCtx.measureText(text).width);
+  const shortName = name.trim().split(/\s+/).slice(0, 2).join(" ") || "Food stop";
+  const lines = shopNameLines(shortName, (text) => measureCtx.measureText(text).width);
   const measured = Math.max(...lines.map(line => measureCtx.measureText(line).width));
   const pillWidth = Math.max(MIN_PILL_WIDTH, Math.ceil(measured + 34));
   const pillHeight = lines.length === 1 ? 36 : 50;
@@ -149,7 +150,7 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
   const drawnWidth = Math.min(ART_SIZE, ART_SIZE * imageRatio);
   const drawnHeight = Math.min(ART_SIZE, ART_SIZE / imageRatio);
   ctx.drawImage(art, crop.x, crop.y, crop.w, crop.h,
-    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 16,
+    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 8,
     drawnWidth, drawnHeight);
 
 
