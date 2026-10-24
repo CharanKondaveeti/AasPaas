@@ -45,7 +45,7 @@ export default function PlaceDetails({
   useEffect(()=>{
     setFood(emptyFoodDetails);
     let active=true;
-    if(place.category==="Food")getFoodDetails(place.id).then((details)=>{if(active)setFood(details);});
+    if(place.category==="Food" && !place.is_demo)getFoodDetails(place.id).then((details)=>{if(active)setFood(details);});
     return ()=>{active=false;};
   },[place.id,place.category]);
   useEffect(()=>{
@@ -77,7 +77,12 @@ export default function PlaceDetails({
       <div
         className={`place-cover ${place.category === "Nature" ? "nature-cover" : ""}`}
       >
-        {place.photo_path ? (
+        {place.is_demo ? (
+          <div className="demo-detail-cover">
+            <img src={foodArtwork(foodCategories.find(c=>c.key===place.dish)?.icon??"biryani")} alt="Illustrative food artwork"/>
+            <strong>FICTIONAL SAMPLE</strong>
+          </div>
+        ) : place.photo_path ? (
           <DetailPhoto key={place.id} id={place.id} name={place.name} />
         ) : (
           <span>Discover Hyderabad</span>
@@ -92,6 +97,12 @@ export default function PlaceDetails({
           {place.category} {place.dish && ` / ${place.dish}`}
         </span>
         <h2>{place.name}</h2>
+        {place.is_demo&&(
+          <div className="demo-detail-notice" role="note">
+            <strong>DEMO — Not a real restaurant</strong>
+            <span>This fictional listing is for testing the interface. Its location, price and hours are examples only.</span>
+          </div>
+        )}
         <div className="detail-discovery-badges">
           {isVerifiedGem(place) && <span className="detail-gem-badge"><Gem size={14} /> Hidden Gem</span>}
           {place.listing_verified_at && <span className="detail-verified-badge"><BadgeCheck size={14} /> Curator verified</span>}
@@ -113,7 +124,16 @@ export default function PlaceDetails({
             <p><Wallet size={17}/>{place.price}</p>
           )}
         </div>
-        {place.category==="Food"&&(
+        {place.is_demo&&(
+          <div className="demo-food-facts">
+            <strong>Example dish: {place.dish}</strong>
+            <span>Sample price: ₹{place.demo_price_inr}</span>
+            <span>Sample diet: {place.demo_diet==="veg"?"Veg":"Non-veg"}</span>
+            <span>Example hours: {place.demo_opens_at}–{place.demo_closes_at}{place.demo_overnight?" (next day)":""}</span>
+            <span>Illustrative type: {place.demo_style?.replaceAll("_"," ")}</span>
+          </div>
+        )}
+        {place.category==="Food"&&!place.is_demo&&(
           <div className="food-verified-menu">
             <h3>Famous for what?</h3>
             {food.dishes.length>0?food.dishes.map(d=>{
@@ -132,7 +152,7 @@ export default function PlaceDetails({
             </details>:<p className="quiet">Opening hours not verified yet.</p>}
           </div>
         )}
-        <div className="food-detail-actions">
+        {!place.is_demo&&<div className="food-detail-actions">
           <button type="button" className={saved?"food-saved":""} aria-pressed={saved}
             onClick={toggleSaved}><Bookmark size={16}/>{saved?"Saved":"Save place"}</button>
           <a target="_blank" rel="noopener noreferrer"
@@ -140,17 +160,21 @@ export default function PlaceDetails({
              <Share2 size={16}/> WhatsApp
           </a>
         </div>
+        }
         {saveIssue&&<p className="quiet" role="status">{saveIssue}</p>}
-        <a
+        {place.is_demo ? (
+          <p className="demo-no-directions">Directions disabled — fictional sample location</p>
+        ) : <a
           className="primary directions"
           href={`https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`}
           target="_blank"
           rel="noopener noreferrer"
         >
           Get directions <ArrowUpRight size={18} />
-        </a>
+        </a>}
         <p className="quiet">
-          {place.listing_verified_at
+          {place.is_demo?"No real location, verified price or opening hours are associated with this sample.":
+          place.listing_verified_at
             ? `Listing checked ${new Date(place.listing_verified_at).toLocaleDateString("en-IN")}. Confirm opening hours before visiting.`
             : "Details are source-listed but not recently verified. Check hours and access before visiting."}
         </p>
