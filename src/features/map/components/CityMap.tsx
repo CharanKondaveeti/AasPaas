@@ -208,7 +208,7 @@ export default function CityMap(props: Props) {
         if (!map.current!.hasImage(imageId)) {
           try {
             map.current!.addImage(imageId, drawShopMarker(image, p.name), {
-              pixelRatio: 2,
+              pixelRatio: 3,
             });
           } catch (error) {
             console.warn("Could not render food shop illustration:", error);

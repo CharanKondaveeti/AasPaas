@@ -5,9 +5,9 @@
  * One symbol avoids independently colliding text/background/icon layers.
  * It moves smoothly inside WebGL while the map pans and zooms.
  */
-const SCALE = 2;
-const ART_SIZE = 69;
-const PILL_TOP = 65;
+const SCALE = 3;
+const ART_SIZE = 86;
+const PILL_TOP = 76;
 const MAX_TEXT_WIDTH = 187;
 const MIN_PILL_WIDTH = 116;
 const FONT = '700 13px Arial, Helvetica, sans-serif';
@@ -93,7 +93,37 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
   ctx.scale(SCALE, SCALE);
 
   // Food illustration, centered above and slightly overlapping the label.
-  ctx.drawImage(art, (width - ART_SIZE) / 2, 0, ART_SIZE, ART_SIZE);
+  // High-DPI composite: keep the artwork crisp and overlap the white pill
+  // by 10px so the dish sits directly on its label, without a visual gap.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  // Crop transparent padding supplied by the generated food illustration.
+  // Otherwise the dish itself looks tiny and floats above the name pill.
+  const cropCanvas = document.createElement("canvas");
+  cropCanvas.width = art.naturalWidth || art.width;
+  cropCanvas.height = art.naturalHeight || art.height;
+  const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
+  let crop = { x: 0, y: 0, w: cropCanvas.width, h: cropCanvas.height };
+  if (cropCtx) {
+    cropCtx.drawImage(art, 0, 0);
+    const pixels = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height).data;
+    let left = cropCanvas.width, top = cropCanvas.height, right = -1, bottom = -1;
+    for (let y = 0; y < cropCanvas.height; y++) {
+      for (let x = 0; x < cropCanvas.width; x++) {
+        if (pixels[(y * cropCanvas.width + x) * 4 + 3] < 24) continue;
+        left = Math.min(left, x); top = Math.min(top, y);
+        right = Math.max(right, x); bottom = Math.max(bottom, y);
+      }
+    }
+    if (right >= left && bottom >= top)
+      crop = { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
+  }
+  const imageRatio = crop.w / crop.h;
+  const drawnWidth = Math.min(ART_SIZE, ART_SIZE * imageRatio);
+  const drawnHeight = Math.min(ART_SIZE, ART_SIZE / imageRatio);
+  ctx.drawImage(art, crop.x, crop.y, crop.w, crop.h,
+    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 10,
+    drawnWidth, drawnHeight);
 
   const left = (width - pillWidth) / 2;
   const middleY = PILL_TOP + pillHeight / 2;
