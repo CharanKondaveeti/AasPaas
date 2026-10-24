@@ -126,6 +126,7 @@ export default function CityMap(props: Props) {
                 "icon-image": ["get", "iconCompact"],
                 "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.64,13.6,0.78],
                 "icon-anchor": "bottom",
+                "icon-offset": [0,14], // align orange dot with map coordinate
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
                 "icon-rotation-alignment": "viewport",
@@ -141,6 +142,7 @@ export default function CityMap(props: Props) {
                 "icon-image": ["get", "icon"],
                 "icon-size": ["interpolate",["linear"],["zoom"],13.6,0.66,15,0.78,18,0.85],
                 "icon-anchor": "bottom",
+                "icon-offset": [0,16],
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
                 "icon-rotation-alignment": "viewport",
@@ -156,6 +158,7 @@ export default function CityMap(props: Props) {
                 "icon-image": ["get", "icon"],
                 "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.82,15,0.9,18,1],
                 "icon-anchor": "bottom",
+                "icon-offset": [0,16],
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": true,
                 "icon-rotation-alignment": "viewport",
