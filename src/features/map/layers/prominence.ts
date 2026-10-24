@@ -17,20 +17,18 @@ export function revealZoom(place: Pick<Place, "prominence_score">): number {
   return 14;
 }
 
-/** Once seen, retain a place until significantly farther out than its reveal. */
-export function hideZoom(place: Pick<Place, "prominence_score">): number {
-  return revealZoom(place) - 1.5;
-}
-
 /** Important places always carry their name + speciality, even at overview zoom. */
 export function fullNameCard(place: Pick<Place, "prominence_score">, zoom: number): boolean {
   return prominenceScore(place) >= 80 || zoom >= 13.6;
 }
 
-/** Avoid introducing overlapping NEW cards at distant zoom. Already seen places stay. */
-export function minNewMarkerDistance(zoom: number): number {
-  if (zoom >= 14.5) return 0;
-  if (zoom >= 13.6) return 90;
-  if (zoom >= 12) return 120;
-  return 150;
+/** Minimum on-screen separation for full illustrated cards (CSS pixels).
+ * Recalculated at every zoom: wide city views are deliberately sparse.
+ */
+export function minMarkerDistance(zoom: number): number {
+  if (zoom >= 16) return 90;
+  if (zoom >= 14.5) return 125;
+  if (zoom >= 13.6) return 165;
+  if (zoom >= 12) return 200;
+  return 250;
 }
