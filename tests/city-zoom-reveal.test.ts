@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { CITY_CENTER } from "../src/lib/types.ts";
 import { containsHyderabad, INDIA_MIN_ZOOM, HYDERABAD_OVERVIEW_ZOOM } from "../src/features/map/layers/indiaRegions.ts";
 import type { MultiPolygon } from "geojson";
-import { keepRevealedPlaces, PLACE_REVEAL_ZOOM, PLACE_HIDE_ZOOM } from "../src/features/map/layers/markerPersistence.ts";
+import { keepRevealedPlaces } from "../src/features/map/layers/markerPersistence.ts";
+import { fullNameCard, hideZoom, prominenceScore, revealZoom } from "../src/features/map/layers/prominence.ts";
 
 test("India map keeps navigation and reveals only actual place icons at close zoom", () => {
   assert.ok(INDIA_MIN_ZOOM < 5);
@@ -13,7 +14,9 @@ test("India map keeps navigation and reveals only actual place icons at close zo
   assert.match(map, /minZoom: INDIA_MIN_ZOOM/);
   assert.match(map, /renderWorldCopies: false/);
   assert.ok(map.includes('loadIndiaRegions(abort.signal)'));
-  assert.ok(map.includes('minzoom: PLACE_HIDE_ZOOM'));
+  assert.ok(map.includes('minzoom: 7.8'));
+  assert.ok(map.includes('symbol-sort-key'));
+  assert.ok(map.includes('fullCard: fullNameCard(p, zoom)'));
   assert.ok(map.includes('fadeDuration: 0'));
   assert.ok(map.includes('"icon-allow-overlap": true'));
   assert.ok(map.includes('type: "symbol"'));
@@ -65,30 +68,44 @@ test("municipal boundary uses cool blue and fades completely at street zoom", ()
   assert.ok(basemap.includes('safeLayout(map, id, "icon-image", "")'));
 });
 
-test("already revealed shops remain through normal zoom-out, but not city-height zoom", () => {
-  type Spot = { id: string; latitude: number; longitude: number };
-  const seen = new Map<string, Spot>();
-  const first = { id: "a", latitude: 17.36, longitude: 78.47 };
-  const second = { id: "b", latitude: 17.37, longitude: 78.48 };
-  const visible = (_p: Spot) => true;
-
-  assert.deepEqual(keepRevealedPlaces(seen, [first], PLACE_REVEAL_ZOOM - 0.1, visible), []);
-  assert.deepEqual(keepRevealedPlaces(seen, [first], PLACE_REVEAL_ZOOM, visible), [first]);
-  // A different viewport/Supabase response must not remove a previously seen place.
-  assert.deepEqual(keepRevealedPlaces(seen, [second], PLACE_REVEAL_ZOOM - 0.5, visible), [first]);
-  assert.deepEqual(keepRevealedPlaces(seen, [second], PLACE_REVEAL_ZOOM, visible), [first, second]);
-  assert.deepEqual(keepRevealedPlaces(seen, [], PLACE_HIDE_ZOOM, visible), [first, second]);
-  assert.deepEqual(keepRevealedPlaces(seen, [], PLACE_HIDE_ZOOM - 0.1, visible), []);
-  // Once the user zooms far enough out, the old session markers are forgotten.
-  assert.deepEqual(keepRevealedPlaces(seen, [], PLACE_REVEAL_ZOOM - 0.1, visible), []);
+test("high priority food keeps its name and speciality at the city overview", () => {
+  const famous = { prominence_score: 98 };
+  const neighbourhood = { prominence_score: 60 };
+  assert.equal(prominenceScore(famous), 98);
+  assert.equal(revealZoom(famous), 9.3);
+  assert.equal(hideZoom(famous), 7.8);
+  assert.equal(fullNameCard(famous, 9.9), true);
+  assert.equal(fullNameCard(neighbourhood, 12.8), false);
+  assert.equal(fullNameCard(neighbourhood, 13.6), true);
 });
 
-test("only places actually inside the viewed area get remembered", () => {
+test("newly revealed locations are ranked and persist until their own hide zoom", () => {
+  type Spot = { id: string; latitude: number; longitude: number; prominence_score: number };
+  const seen = new Map<string, Spot>();
+  const icon = { id: "icon", latitude: 17.36, longitude: 78.47, prominence_score: 98 };
+  const local = { id: "local", latitude: 17.37, longitude: 78.48, prominence_score: 45 };
+  const inside = (_p: Spot) => true;
+  assert.deepEqual(keepRevealedPlaces(seen, [local, icon], 9.9, inside), [icon]);
+  assert.deepEqual(keepRevealedPlaces(seen, [local], 14, inside), [local, icon]);
+  assert.deepEqual(keepRevealedPlaces(seen, [], 12.6, inside), [local, icon]);
+  assert.deepEqual(keepRevealedPlaces(seen, [], 12.4, inside), [icon]);
+  assert.deepEqual(keepRevealedPlaces(seen, [], 7.7, inside), []);
+});
+
+test("density rules prevent NEW cards overlapping, but never remove seen ones", () => {
   const seen = new Map();
-  const first = { id: "near", latitude: 17.36, longitude: 78.47 };
-  const second = { id: "outside", latitude: 17.43, longitude: 78.52 };
-  assert.deepEqual(
-    keepRevealedPlaces(seen, [first, second], PLACE_REVEAL_ZOOM, p => p.id === "near"),
-    [first],
-  );
+  const a = { id: "a", latitude: 17.36, longitude: 78.47, prominence_score: 99 };
+  const b = { id: "b", latitude: 17.361, longitude: 78.471, prominence_score: 98 };
+  const always = () => true;
+  const rejectNext = (_candidate: typeof a, existing: readonly typeof a[]) => existing.length === 0;
+  assert.deepEqual(keepRevealedPlaces(seen, [b, a], 9.9, always, rejectNext), [a]);
+  assert.deepEqual(keepRevealedPlaces(seen, [b], 10, always, () => true), [b, a]);
+  assert.deepEqual(keepRevealedPlaces(seen, [], 9, always, rejectNext), [b, a]);
+});
+
+test("only places inside the viewport can first be revealed", () => {
+  const seen = new Map();
+  const a = { id: "near", latitude: 17.36, longitude: 78.47, prominence_score: 95 };
+  const b = { id: "outside", latitude: 17.43, longitude: 78.52, prominence_score: 95 };
+  assert.deepEqual(keepRevealedPlaces(seen, [a,b], 9.9, p => p.id === "near"), [a]);
 });
