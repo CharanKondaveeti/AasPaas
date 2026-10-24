@@ -2,12 +2,17 @@
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
-import { Map as LibreMap, Marker } from "maplibre-gl";
+import { Map as LibreMap, Marker, type GeoJSONSource } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
 import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
 import { loadCityStyle, applyCityPalette } from "../layers/style";
 import { addIndiaAvailabilityLayers, containsHyderabad, loadIndiaRegions, INDIA_MIN_ZOOM, INDIA_VIEW_BOUNDS, HYDERABAD_OVERVIEW_ZOOM } from "../layers/indiaRegions";
 import type { MultiPolygon } from "geojson";
+import { iconFor, iconNames, iconPath } from "../layers/icons";
+
+/** Only reveal small real-place icons after zooming into Hyderabad. */
+const PLACE_ICON_MIN_ZOOM = 12.8;
+const PLACE_ICON_LAYER = "aaspaas-place-icons";
 type Props = {
   places: Place[];
   selected: Place | null;
@@ -78,9 +83,59 @@ export default function CityMap(props: Props) {
             } catch (error) {
               console.warn("Geographic launch boundary unavailable:", error);
             }
-            // Clean geographic basemap only: no tree sprites, WebP assets,
-            // building illustrations, or decorative place icons. Approved
-            // places remain available via the searchable list and details.
+            // Illustrations are just icons for actual approved places.
+            // All icons render inside MapLibre's canvas rather than laggy
+            // HTML markers. Missing artwork cannot stop the map from loading.
+            const loadedIcons = await Promise.allSettled(
+              iconNames.map(async (name) => {
+                const image = new Image();
+                image.src = iconPath(name);
+                await image.decode();
+                return { name, image };
+              }),
+            );
+            if (disposed) return;
+            for (const result of loadedIcons) {
+              if (result.status !== "fulfilled") continue;
+              const { name, image } = result.value;
+              if (!instance.hasImage(name)) instance.addImage(name, image, { pixelRatio: 2 });
+            }
+            instance.addSource("aaspaas-places", {
+              type: "geojson",
+              data: { type: "FeatureCollection", features: [] },
+            });
+            instance.addLayer({
+              id: PLACE_ICON_LAYER,
+              type: "symbol",
+              source: "aaspaas-places",
+              minzoom: PLACE_ICON_MIN_ZOOM,
+              layout: {
+                "icon-image": ["coalesce", ["image", ["get", "icon"]], ["image", "places"]],
+                // Existing artwork is 80 x 80, registered at 2x, resulting
+                // in small 32px illustrative marks. Never show number clusters.
+                "icon-size": 0.80,
+                "icon-anchor": "bottom",
+                "icon-allow-overlap": false,
+                "icon-ignore-placement": false,
+                "icon-rotation-alignment": "viewport",
+                "icon-pitch-alignment": "viewport",
+              },
+            });
+            instance.on("click", PLACE_ICON_LAYER, (e) => {
+              if (latest.current.picking) return;
+              const id = e.features?.[0]?.properties?.id;
+              if (typeof id !== "string") return;
+              const place = latest.current.places.find((item) => item.id === id);
+              if (place) latest.current.onSelect(place);
+            });
+            instance.on("mouseenter", PLACE_ICON_LAYER, () => {
+              if (!instance || latest.current.picking) return;
+              instance.getCanvas().style.cursor = "pointer";
+            });
+            instance.on("mouseleave", PLACE_ICON_LAYER, () => {
+              if (!instance || latest.current.picking) return;
+              instance.getCanvas().style.cursor = "";
+            });
             instance.on("click", (e) => {
               if (!latest.current.picking || !instance) return;
               pickMarker.current?.remove();
@@ -130,6 +185,30 @@ export default function CityMap(props: Props) {
       map.current = null;
     };
   }, [attempt]);
+  // Keep map symbols synced to the visible Supabase search and filters.
+  // This preserves the existing selection flow and avoids DOM marker lag.
+  useEffect(() => {
+    if (!ready || !map.current) return;
+    const source = map.current.getSource("aaspaas-places") as GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData({
+      type: "FeatureCollection",
+      features: props.places
+        .filter((p) => Number.isFinite(p.longitude) && Number.isFinite(p.latitude))
+        .map((p) => ({
+          type: "Feature" as const,
+          geometry: {
+            type: "Point" as const,
+            coordinates: [p.longitude, p.latitude],
+          },
+          properties: {
+            id: p.id,
+            icon: iconFor(p.category, p.dish),
+          },
+        })),
+    });
+  }, [props.places, ready]);
+
   useEffect(() => {
     if (props.selected && ready)
       map.current?.flyTo({
