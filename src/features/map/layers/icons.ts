@@ -17,7 +17,7 @@ export function iconFor(
     [/punugul/, "punugulu"], [/samosa/, "samosa"], [/jalebi|jilebi/, "jalebi"],
     [/pani.?puri|golgappa|puchka/, "pani-puri"], [/kebab|kab[a-z]*b/, "kebab"],
     [/idli/, "idli"], [/biryani/, "biryani"], [/chaat|chat /, "chaat"],
-    [/dosa/, "dosa"], [/chai|tea/, "tea"],
+    [/dosa/, "dosa"], [/chai|tea/, "chai"],
   ];
   for (const [pattern, asset] of tests) if (pattern.test(normalized) && available.has(asset)) return asset;
   return null;
