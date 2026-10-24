@@ -124,7 +124,6 @@ export default function CityMap(props: Props) {
                 "text-font": ["Noto Sans Bold"],
                 "text-size": 11,
                 "text-max-width": 10,
-                "text-max-lines": 2,
                 "text-anchor": "top",
                 "text-offset": [0, 0.35],
                 "text-allow-overlap": false,
