@@ -1,62 +1,28 @@
 import type { Place } from "@/lib/types";
 
-/** New illustrated WebP icons only. All old SVG assets were removed. */
-export const iconNames = [
-  "biryani", "chaat", "chai", "dosa", "idli", "jalebi",
-  "kebab", "pani-puri", "punugulu", "samosa",
-] as const;
+/** Only place types with matching WebP illustrations receive map artwork. */
+export const iconNames = ["biryani", "punugulu", "samosa", "chaat", "dosa", "chai", "jalebi", "idli", "kebab", "pani-puri"] as const;
+export type PlaceIcon = (typeof iconNames)[number];
+const available = new Set<string>(iconNames);
 
-export type FoodIllustration = (typeof iconNames)[number];
-
-const aliases: Record<string, FoodIllustration> = {
-  biryani: "biryani",
-  chaat: "chaat",
-  chai: "chai",
-  tea: "chai",
-  dosa: "dosa",
-  idli: "idli",
-  jalebi: "jalebi",
-  jilebi: "jalebi",
-  jilabi: "jalebi",
-  kebab: "kebab",
-  kabab: "kebab",
-  kababs: "kebab",
-  "pani puri": "pani-puri",
-  "pani-puri": "pani-puri",
-  golgappa: "pani-puri",
-  "gol gappa": "pani-puri",
-  punugulu: "punugulu",
-  punukulu: "punugulu",
-  samosa: "samosa",
-};
-
-/** Only use illustrations when the food actually matches the dish.
- * Never portray Mandi, generic Sweets, or an unknown business as Biryani.
- */
 export function iconFor(
   category: Place["category"],
   dish: string | null,
   name = "",
   famousFor = "",
-): FoodIllustration | null {
+): PlaceIcon | null {
   if (category !== "Food") return null;
-  const matches = (source: string, key: string) => {
-    const words = " " + source.toLowerCase().replace(/[^a-z]+/g, " ") + " ";
-    const term = " " + key.replace(/[^a-z]+/g, " ") + " ";
-    return words.includes(term);
-  };
-  // A tagged food dish takes priority over mentions in the shop name.
-  if (dish) {
-    const dishIcon = aliases[dish.trim().toLowerCase()];
-    if (dishIcon) return dishIcon;
-  }
-  for (const [word, icon] of Object.entries(aliases)) {
-    if (matches(name, word) || matches(famousFor, word)) return icon;
-  }
+  const normalized = [dish ?? "", name, famousFor].join(" ").toLowerCase();
+  const tests: Array<[RegExp, PlaceIcon]> = [
+    [/punugul/, "punugulu"], [/samosa/, "samosa"], [/jalebi|jilebi/, "jalebi"],
+    [/pani.?puri|golgappa|puchka/, "pani-puri"], [/kebab|kab[a-z]*b/, "kebab"],
+    [/idli/, "idli"], [/biryani/, "biryani"], [/chaat|chat /, "chaat"],
+    [/dosa/, "dosa"], [/chai|tea/, "chai"],
+  ];
+  for (const [pattern, asset] of tests) if (pattern.test(normalized) && available.has(asset)) return asset;
   return null;
 }
 
-/** Vite's base path works on GitHub Pages and on the original domain. */
-export function iconPath(name: FoodIllustration): string {
-  return `${import.meta.env?.BASE_URL ?? "/"}food-illustrations/${name}.webp`;
+export function iconPath(name: PlaceIcon): string {
+  return `${import.meta.env?.BASE_URL ?? "/"}icons/illustrated/${name}.webp`;
 }
