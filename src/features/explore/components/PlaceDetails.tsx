@@ -27,11 +27,13 @@ export default function PlaceDetails({
         )}
       </div>
       <div className="detail-body">
-        <img
-          className="detail-place-icon"
-          src={iconPath(iconFor(place.category, place.dish))}
-          alt=""
-        />
+        {iconFor(place.category, place.dish, place.name, place.famous_for) && (
+          <img
+            className="detail-place-icon"
+            src={iconPath(iconFor(place.category, place.dish, place.name, place.famous_for)!)}
+            alt=""
+          />
+        )}
         <span className="eyebrow">
           {place.category} {place.dish && ` / ${place.dish}`}
         </span>
