@@ -122,6 +122,8 @@ export default function AdminPage() {
         verification_notes: form.get("verification_notes") || null,
         is_hidden_gem: form.get("is_hidden_gem") === "on",
         hidden_gem_reason: form.get("hidden_gem_reason") || null,
+        prominence_score: Number(form.get("prominence_score")),
+        prominence_reason: form.get("prominence_reason") || null,
       };
       const payload = new FormData();
       payload.set("id", editing.id);
@@ -247,6 +249,7 @@ export default function AdminPage() {
                   <span className="eyebrow">{placeDiscoveryGroup(p).replace("_", " ")} · {p.listing_verified_at ? "Verified" : "Needs verification"}</span>
                   <h2>{p.name}</h2>
                   <p>{p.famous_for}</p>
+                  <p className="quiet">Map priority: {p.prominence_score ?? 45}/100</p>
                   <p className="quiet">
                     {p.latitude.toFixed(5)}, {p.longitude.toFixed(5)}
                   </p>
@@ -376,6 +379,21 @@ export default function AdminPage() {
                 Evidence checked — mark as verified
               </label>
             </div>
+            <div className="field-pair">
+              <label>
+                Map prominence (0–100)
+                <input name="prominence_score" type="number" min={0} max={100} step={1}
+                  required defaultValue={editing.prominence_score ?? 45} />
+              </label>
+              <label>
+                Why should this place appear early?
+                <input name="prominence_reason" maxLength={300}
+                  defaultValue={editing.prominence_reason || ""}
+                  placeholder="City landmark, signature speciality, local importance…" />
+              </label>
+            </div>
+            <p className="quiet">90+ appears at city overview; 80+ at city zoom;
+              65+ at neighbourhood zoom. High-priority cards keep their names and signature items.</p>
             <label>
               Verification notes (where and how did you confirm details?)
               <textarea name="verification_notes" rows={3} defaultValue={editing.verification_notes || ""} maxLength={700}
