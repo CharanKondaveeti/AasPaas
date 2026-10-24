@@ -6,8 +6,8 @@
  * It moves smoothly inside WebGL while the map pans and zooms.
  */
 const SCALE = 3;
-const ART_SIZE = 86;
-const PILL_TOP = 76;
+const ART_SIZE = 104;
+const PILL_TOP = 88;
 const MAX_TEXT_WIDTH = 187;
 const MIN_PILL_WIDTH = 116;
 const FONT = '700 13px Arial, Helvetica, sans-serif';
@@ -92,9 +92,9 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
   if (!ctx) throw new Error("Unable to draw food map markers");
   ctx.scale(SCALE, SCALE);
 
-  // Food illustration, centered above and slightly overlapping the label.
+  // Crop the illustration first, then paint it on top of the name capsule.
   // High-DPI composite: keep the artwork crisp and overlap the white pill
-  // by 10px so the dish sits directly on its label, without a visual gap.
+  // into the top edge of the name pill so there is no floating gap.
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   // Crop transparent padding supplied by the generated food illustration.
@@ -110,7 +110,7 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
     let left = cropCanvas.width, top = cropCanvas.height, right = -1, bottom = -1;
     for (let y = 0; y < cropCanvas.height; y++) {
       for (let x = 0; x < cropCanvas.width; x++) {
-        if (pixels[(y * cropCanvas.width + x) * 4 + 3] < 24) continue;
+        if (pixels[(y * cropCanvas.width + x) * 4 + 3] < 72) continue;
         left = Math.min(left, x); top = Math.min(top, y);
         right = Math.max(right, x); bottom = Math.max(bottom, y);
       }
@@ -118,13 +118,6 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
     if (right >= left && bottom >= top)
       crop = { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
   }
-  const imageRatio = crop.w / crop.h;
-  const drawnWidth = Math.min(ART_SIZE, ART_SIZE * imageRatio);
-  const drawnHeight = Math.min(ART_SIZE, ART_SIZE / imageRatio);
-  ctx.drawImage(art, crop.x, crop.y, crop.w, crop.h,
-    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 10,
-    drawnWidth, drawnHeight);
-
   const left = (width - pillWidth) / 2;
   const middleY = PILL_TOP + pillHeight / 2;
 
@@ -148,6 +141,18 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
   ctx.lineWidth = 0.8;
   roundedPill(ctx, left, PILL_TOP, pillWidth, pillHeight);
   ctx.stroke();
+
+  // Paint the trimmed dish AFTER the pill, so the dish rests on its top
+  // edge rather than disappearing behind the white background. Its lower
+  // pixels intentionally overlap the pill by 16px.
+  const imageRatio = crop.w / crop.h;
+  const drawnWidth = Math.min(ART_SIZE, ART_SIZE * imageRatio);
+  const drawnHeight = Math.min(ART_SIZE, ART_SIZE / imageRatio);
+  ctx.drawImage(art, crop.x, crop.y, crop.w, crop.h,
+    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 16,
+    drawnWidth, drawnHeight);
+
+
 
   ctx.font = FONT;
   ctx.fillStyle = "#17211D";
