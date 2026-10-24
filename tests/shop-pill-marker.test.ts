@@ -42,3 +42,15 @@ test("reference style includes white rounded capsule, dark name and orange side 
   assert.ok(source.includes('ctx.arc(x, middleY, 7'));
   assert.ok(!source.includes('document.body.appendChild'));
 });
+
+test("food artwork is high-DPI, cropped, and overlaps the name pill", () => {
+  const marker = readFileSync("src/features/map/layers/shopPillMarker.ts", "utf8");
+  const map = readFileSync("src/features/map/components/CityMap.tsx", "utf8");
+  assert.ok(marker.includes("const SCALE = 3"));
+  assert.ok(marker.includes("const ART_SIZE = 86"));
+  assert.ok(marker.includes("const PILL_TOP = 76"));
+  assert.ok(marker.includes("PILL_TOP - drawnHeight + 10"));
+  assert.ok(marker.includes("cropCtx.getImageData"));
+  assert.ok(marker.includes('ctx.imageSmoothingQuality = "high"'));
+  assert.ok(map.includes("pixelRatio: 3"));
+});
