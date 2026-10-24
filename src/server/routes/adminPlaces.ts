@@ -19,6 +19,7 @@ export async function GET(request: Request) {
       .from("places")
       .select("*")
       .eq("status", status)
+      .eq("is_demo", false)
       .order("created_at", { ascending: false })
       .range(offset, offset + 49);
     if (error) throw error;
@@ -64,10 +65,11 @@ export async function PATCH(request: Request) {
       throw new ApiError(400, parsed.error.issues[0].message);
     const { data: old, error: readError } = await client
       .from("places")
-      .select("photo_path, listing_verified_at, verification_notes")
+      .select("photo_path, listing_verified_at, verification_notes, is_demo")
       .eq("id", id)
       .single();
     if (readError || !old) throw new ApiError(404, "Place not found.");
+    if (old.is_demo) throw new ApiError(403,"Generated test places cannot be approved as real businesses.");
     if (parsed.data.status === "approved" && !parsed.data.source_url)
       throw new ApiError(400, "Add a verification source before publishing.");
     const { listing_verified, ...safeFields } = parsed.data;
