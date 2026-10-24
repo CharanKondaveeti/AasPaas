@@ -16,19 +16,16 @@ function DetailPhoto({ id, name }: { id: string; name: string }) {
   );
 }
 function DetailFoodIcon({ icon }: { icon: NonNullable<ReturnType<typeof iconFor>> }) {
-  const [fallback, setFallback] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Only display the new high-definition illustration. Never fall back
+  // to obsolete 128px artwork, which made detail views appear blurry.
   if (failed) return null;
-  const fallbackPath = `${import.meta.env?.BASE_URL ?? "/"}food-illustrations/${icon}.webp`;
   return (
     <img
       className="detail-place-icon"
-      src={fallback ? fallbackPath : iconPath(icon)}
+      src={iconPath(icon)}
       alt=""
-      onError={() => {
-        if (!fallback) setFallback(true);
-        else setFailed(true);
-      }}
+      onError={() => setFailed(true)}
     />
   );
 }
