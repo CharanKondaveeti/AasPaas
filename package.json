@@ -8,12 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/core.test.ts tests/database.test.ts tests/map-scenery.test.mjs tests/greenery-assets.test.ts tests/park-icons.test.ts tests/native-park-boundary.test.ts tests/city-zoom-reveal.test.ts tests/sparse-greenery.test.ts",
-    "postinstall": "node scripts/prepare-map.mjs",
-    "map:scenery": "node scripts/generate-map-scenery.mjs",
-    "prebuild": "node scripts/prepare-greenery.mjs",
-    "predev": "node scripts/prepare-greenery.mjs",
-    "pretest": "node scripts/prepare-greenery.mjs"
+    "test": "node --import tsx --test tests/core.test.ts tests/database.test.ts tests/city-zoom-reveal.test.ts",
+    "postinstall": "node scripts/prepare-map.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
