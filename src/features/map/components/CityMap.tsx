@@ -9,12 +9,15 @@ import { loadCityStyle, applyCityPalette } from "../layers/style";
 import { addIndiaAvailabilityLayers, containsHyderabad, loadIndiaRegions, INDIA_MIN_ZOOM, INDIA_VIEW_BOUNDS, HYDERABAD_OVERVIEW_ZOOM } from "../layers/indiaRegions";
 import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, extraFoodIcons, iconPath } from "../layers/icons";
-import { drawShopMarker, shopMarkerId } from "../layers/shopPillMarker";
+import { drawShopMarker, drawCompactShopMarker, markerDishLabel, shopMarkerId } from "../layers/shopPillMarker";
 import { drawDiscoveryMarker } from "../layers/discoveryMarker";
 
 /** Only reveal small real-place icons after zooming into Hyderabad. */
 const PLACE_ICON_MIN_ZOOM = 12.8;
 const PLACE_ICON_LAYER = "aaspaas-place-icons";
+const COMPACT_ICON_LAYER = "aaspaas-compact-food-icons";
+const SELECTED_ICON_LAYER = "aaspaas-selected-food-icon";
+const FOOD_LABEL_MIN_ZOOM = 13.6;
 type Props = {
   places: Place[];
   selected: Place | null;
@@ -107,42 +110,78 @@ export default function CityMap(props: Props) {
               type: "geojson",
               data: { type: "FeatureCollection", features: [] },
             });
+            // At distant zoom: only the dish illustration. At street zoom:
+            // name + famous dish in one pill. No numbered clustering.
+            instance.addSource("aaspaas-selected-place", {
+              type: "geojson",
+              data: { type: "FeatureCollection", features: [] },
+            });
             instance.addLayer({
-              id: PLACE_ICON_LAYER,
+              id: COMPACT_ICON_LAYER,
               type: "symbol",
               source: "aaspaas-places",
               minzoom: PLACE_ICON_MIN_ZOOM,
+              maxzoom: FOOD_LABEL_MIN_ZOOM,
               layout: {
-                // Each sprite includes the dish, two orange side dots, and
-                // a white capsule with the actual shop name printed inside.
-                // A single symbol avoids separated labels during map drag
-                // and avoids overlapping with other shops.
-                "icon-image": ["get", "icon"],
-                // Compact markers preserve the map beneath the food art.
-                // Zoom-based sizing keeps nearby labels readable without crowding.
-                "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.48,15,0.58,18,0.68],
+                "icon-image": ["get", "iconCompact"],
+                "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.64,13.6,0.78],
                 "icon-anchor": "bottom",
+                "icon-offset": [0,14], // align orange dot with map coordinate
                 "icon-allow-overlap": false,
                 "icon-ignore-placement": false,
                 "icon-rotation-alignment": "viewport",
                 "icon-pitch-alignment": "viewport",
               },
             });
-            instance.on("click", PLACE_ICON_LAYER, (e) => {
-              if (latest.current.picking) return;
-              const id = e.features?.[0]?.properties?.id;
-              if (typeof id !== "string") return;
-              const place = latest.current.places.find((item) => item.id === id);
-              if (place) latest.current.onSelect(place);
+            instance.addLayer({
+              id: PLACE_ICON_LAYER,
+              type: "symbol",
+              source: "aaspaas-places",
+              minzoom: FOOD_LABEL_MIN_ZOOM,
+              layout: {
+                "icon-image": ["get", "icon"],
+                "icon-size": ["interpolate",["linear"],["zoom"],13.6,0.66,15,0.78,18,0.85],
+                "icon-anchor": "bottom",
+                "icon-offset": [0,16],
+                "icon-allow-overlap": false,
+                "icon-ignore-placement": false,
+                "icon-rotation-alignment": "viewport",
+                "icon-pitch-alignment": "viewport",
+              },
             });
-            instance.on("mouseenter", PLACE_ICON_LAYER, () => {
-              if (!instance || latest.current.picking) return;
-              instance.getCanvas().style.cursor = "pointer";
+            instance.addLayer({
+              id: SELECTED_ICON_LAYER,
+              type: "symbol",
+              source: "aaspaas-selected-place",
+              minzoom: PLACE_ICON_MIN_ZOOM,
+              layout: {
+                "icon-image": ["get", "icon"],
+                "icon-size": ["interpolate",["linear"],["zoom"],12.8,0.82,15,0.9,18,1],
+                "icon-anchor": "bottom",
+                "icon-offset": [0,16],
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
+                "icon-rotation-alignment": "viewport",
+                "icon-pitch-alignment": "viewport",
+              },
             });
-            instance.on("mouseleave", PLACE_ICON_LAYER, () => {
-              if (!instance || latest.current.picking) return;
-              instance.getCanvas().style.cursor = "";
-            });
+            for (const layer of [PLACE_ICON_LAYER,COMPACT_ICON_LAYER,SELECTED_ICON_LAYER]) {
+              instance.on("click", layer, (e) => {
+                if (latest.current.picking) return;
+                const id = e.features?.[0]?.properties?.id;
+                if (typeof id !== "string") return;
+                const place = latest.current.places.find((item) => item.id === id);
+                if (place) latest.current.onSelect(place);
+              });
+              instance.on("mouseenter", layer, () => {
+                if (!instance || latest.current.picking) return;
+                instance.getCanvas().style.cursor = "pointer";
+              });
+              instance.on("mouseleave", layer, () => {
+                if (!instance || latest.current.picking) return;
+                instance.getCanvas().style.cursor = "";
+              });
+            }
             instance.on("click", (e) => {
               if (!latest.current.picking || !instance) return;
               pickMarker.current?.remove();
@@ -206,26 +245,31 @@ export default function CityMap(props: Props) {
         const image = icon ? foodArt.current.get(icon) : undefined;
         const group = placeDiscoveryGroup(p);
         const gem = isVerifiedGem(p);
-        // Dish illustrations stay unchanged; vector pills show niche places
-        // without invented food art, ugly buildings or numbered pins.
-        const mapName=p.is_demo?`${p.dish||"Food"} · ${p.name.split(" ").slice(0,2).join(" ")}`:p.name;
-        // Demo pins share one GPU sprite per food type instead of creating
-        // hundreds of identical image textures as the visitor pans the map.
-        // Feature IDs stay unique so tapping a pin still opens its own sample.
-        const imageId = p.is_demo
-          ? shopMarkerId("preview-" + p.id, mapName, icon || group)
-          : icon && image
-            ? (gem ? shopMarkerId(p.id, mapName, icon + "-gem") : shopMarkerId(p.id, mapName, icon))
-            : shopMarkerId(p.id, mapName, "discovery-" + group + "-" + gem);
+        // Real or natural-looking preview shop names, with the actual
+        // signature-dish label shown underneath. Demo identity is conveyed
+        // separately in the overlay, not baked into restaurant names.
+        const mapName = p.name;
+        const signature = markerDishLabel(p.dish,p.famous_for);
+        const imageId = icon && image
+          ? shopMarkerId(p.id, mapName, icon + "|" + signature + (gem?"|gem":""))
+          : shopMarkerId(p.id, mapName, "discovery-" + group + "-" + gem);
         if (!map.current!.hasImage(imageId)) {
           try {
             const marker = icon && image
-              ? (gem ? drawShopMarker(image, mapName, true) : drawShopMarker(image, mapName))
+              ? drawShopMarker(image, mapName, signature, {verifiedGem:gem})
               : drawDiscoveryMarker(mapName, group, gem);
-            map.current!.addImage(imageId, marker, { pixelRatio: 3 });
+            map.current!.addImage(imageId,marker,{pixelRatio:3});
           } catch (error) {
-            console.warn("Could not render discovery marker:", error);
+            console.warn("Could not render illustrated place marker:",error);
             return [];
+          }
+        }
+        const compactId=icon&&image?"food-overview-"+icon:imageId;
+        if(icon&&image&&!map.current!.hasImage(compactId)){
+          try {
+            map.current!.addImage(compactId,drawCompactShopMarker(image),{pixelRatio:3});
+          } catch(error) {
+            console.warn("Could not render compact food icon:",error);
           }
         }
         return [{
@@ -238,11 +282,46 @@ export default function CityMap(props: Props) {
             id: p.id,
             name: p.name,
             icon: imageId,
+            iconCompact: map.current!.hasImage(compactId) ? compactId : imageId,
           },
         }];
       }),
     });
   }, [props.places, ready]);
+
+  // Selected marker gets a highlighted card and always paints above
+  // other places. On mobile, its position stays glued to the map geometry.
+  useEffect(() => {
+    const instance=map.current;
+    if(!ready||!instance)return;
+    const filter:["!=",["get",string],string]=["!=",["get","id"],props.selected?.id||""];
+    instance.setFilter(PLACE_ICON_LAYER,filter);
+    instance.setFilter(COMPACT_ICON_LAYER,filter);
+    const selectedSource=instance.getSource("aaspaas-selected-place") as GeoJSONSource|undefined;
+    if(!selectedSource)return;
+    const p=props.selected;
+    if(!p||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)){
+      selectedSource.setData({type:"FeatureCollection",features:[]});
+      return;
+    }
+    const icon=iconFor(p.category,p.dish,p.name,p.famous_for);
+    const image=icon?foodArt.current.get(icon):undefined;
+    const group=placeDiscoveryGroup(p),gem=isVerifiedGem(p);
+    const signature=markerDishLabel(p.dish,p.famous_for);
+    const imageId=shopMarkerId(p.id,p.name,(icon||group)+"|"+signature+"|selected");
+    if(!instance.hasImage(imageId)){
+      try{
+        const highlighted=image
+          ?drawShopMarker(image,p.name,signature,{selected:true,verifiedGem:gem})
+          :drawDiscoveryMarker(p.name,group,gem);
+        instance.addImage(imageId,highlighted,{pixelRatio:3});
+      }catch(error){console.warn("Could not highlight map marker:",error);return;}
+    }
+    selectedSource.setData({type:"FeatureCollection",features:[{
+      type:"Feature",geometry:{type:"Point",coordinates:[p.longitude,p.latitude]},
+      properties:{id:p.id,icon:imageId}
+    }]});
+  },[props.selected,ready]);
 
   useEffect(() => {
     if (props.selected && ready)
