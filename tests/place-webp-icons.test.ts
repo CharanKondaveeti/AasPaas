@@ -41,7 +41,7 @@ test("map draws whole illustrated shop pills in one selectable GPU layer", () =>
   const code=readFileSync("src/features/map/components/CityMap.tsx","utf8");
   for(const needle of [
     'source: "aaspaas-places"',
-    'minzoom: PLACE_HIDE_ZOOM',
+    'minzoom: 7.8',
     '"icon-image": ["get", "icon"]',
     '"icon-anchor": "bottom"',
     '"icon-allow-overlap": true',
