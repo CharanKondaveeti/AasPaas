@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Compass,
   Gem,
+  FlaskConical,
 } from "lucide-react";
 import {
   isVerifiedGem,
@@ -45,6 +46,7 @@ export default function ExplorePage() {
     [hiddenOnly, setHiddenOnly] = useState(false),
     [dish, setDish] = useState(""),
     [foodFilters, setFoodFilters] = useState<FoodFiltersState>(emptyFoodFilters),
+    [sampleMode, setSampleMode] = useState(false),
     [places, setPlaces] = useState<Place[]>([]),
     [selected, setSelected] = useState<Place | null>(null),
     [error, setError] = useState(""),
@@ -59,7 +61,12 @@ export default function ExplorePage() {
     [truncated, setTruncated] = useState(false),
     [retry, setRetry] = useState(0);
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("q");
+    const params=new URLSearchParams(window.location.search);
+    if(params.get("demo")==="food"){
+      setSampleMode(true);setGroup("food");setCategory("Food");
+      setDish("Biryani");setFoodFilters({...emptyFoodFilters,dish:"Biryani"});
+    }
+    const q = params.get("q");
     if (q) {
       setQuery(q.slice(0, 100));
       setShowList(true);
@@ -88,7 +95,7 @@ export default function ExplorePage() {
     }
     const timer = setTimeout(() => {
       setLoading(true);
-      getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, group, hiddenOnly, abort.signal, group === "food" ? foodFilters : undefined)
+      getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, group, hiddenOnly, abort.signal, group === "food" ? foodFilters : undefined, sampleMode)
         .then((data) => {
           setPlaces(data.places);
           setMode(data.mode);
@@ -106,7 +113,7 @@ export default function ExplorePage() {
       clearTimeout(timer);
       abort.abort();
     };
-  }, [bounds, query, category, dish, group, hiddenOnly, foodFilters, retry]);
+  }, [bounds, query, category, dish, group, hiddenOnly, foodFilters, sampleMode, retry]);
   function select(p: Place) {
     setSelected(p);
     setShowList(false);
@@ -178,6 +185,11 @@ export default function ExplorePage() {
                 setCategory(value === "food" ? "Food" : "All");
                 setDish("");
                 setFoodFilters(emptyFoodFilters);
+                if(value!=="food"){
+                  setSampleMode(false);
+                  const url=new URL(window.location.href);url.searchParams.delete("demo");
+                  window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+                }
                 setSelected(null);
               }}
             >
@@ -197,6 +209,21 @@ export default function ExplorePage() {
             Hidden Gems
           </button>
         </nav>
+        {group === "food" && (
+          <div className="food-demo-toggle" role="group" aria-label="Sample data preview">
+            <button aria-pressed={sampleMode} className={sampleMode?"active":""} onClick={()=>{
+              const next=!sampleMode;
+              setSampleMode(next);setSelected(null);setQuery("");setHiddenOnly(false);
+              setDish(next?"Biryani":"");
+              setFoodFilters({...emptyFoodFilters,dish:next?"Biryani":""});
+              const url=new URL(window.location.href);
+              if(next)url.searchParams.set("demo","food");
+              else url.searchParams.delete("demo");
+              window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+            }}><FlaskConical size={15}/>{sampleMode?"Sample mode ON · 600":"Preview 600 samples"}</button>
+            {sampleMode&&<span>FICTIONAL PLACES · FOR TESTING ONLY</span>}
+          </div>
+        )}
         {group === "food" && (
           <FoodFilters
             value={{...foodFilters, dish}}
@@ -252,7 +279,7 @@ export default function ExplorePage() {
             ) : (
               <>
                 <div className="panel-intro">
-                  <span className="eyebrow">TAKE THE SCENIC DETOUR</span>
+                  <span className="eyebrow">{sampleMode&&group==="food"?"DEMO · 600 FICTIONAL FOOD PLACES":"TAKE THE SCENIC DETOUR"}</span>
                   <h1>
                     {query ? (
                       "Find your next stop."
@@ -275,7 +302,7 @@ export default function ExplorePage() {
                       ? "More regions coming soon"
                       : loading
                         ? "Looking around…"
-                        : `${places.length} places ${query ? "found" : "in this view"}`}
+                        : `${places.length} ${sampleMode&&group==="food"?"sample ":""}places ${query ? "found" : "in this view"}`}
                     <button
                       onClick={() => setShowList(!showList)}
                       aria-label="Toggle place list"
@@ -285,7 +312,7 @@ export default function ExplorePage() {
                   </div>
                 </div>
                 <div className="places-list">
-                  {query.toLowerCase().trim() === "ameerpet" && (
+                  {!sampleMode && query.toLowerCase().trim() === "ameerpet" && (
                     <button
                       className="place-row"
                       onClick={() => {
@@ -334,7 +361,8 @@ export default function ExplorePage() {
                           setGroup("all");
                           setHiddenOnly(false);
                           setDish("");
-                          setFoodFilters(emptyFoodFilters);
+                          setFoodFilters(sampleMode?{...emptyFoodFilters,dish:"Biryani"}:emptyFoodFilters);
+                          if(sampleMode)setDish("Biryani");
                         }}
                       >
                         Clear filters
@@ -361,6 +389,7 @@ export default function ExplorePage() {
                         </span>
                         <span className="place-row-text">
                           <strong>{p.name}</strong>
+                          {p.is_demo&&<span className="demo-list-tag">FICTIONAL SAMPLE · NOT A REAL SHOP</span>}
                           <span>
                             {isVerifiedGem(p) ? "♦ Hidden Gem" : (p.dish || p.category)} <b>·</b> {p.area}
                           </span>
@@ -374,6 +403,8 @@ export default function ExplorePage() {
                   <span>
                     {githubPagesPreview
                       ? "GitHub Pages preview · view only."
+                      : mode === "sample"
+                        ? "Fictional data for testing only · Not real recommendations."
                       : truncated
                         ? "Zoom in to see more places."
                       : mode === "curated"
@@ -393,6 +424,7 @@ export default function ExplorePage() {
               />
             </div>
           )}
+          {sampleMode&&group==="food"&&<div className="sample-map-banner" role="status">SAMPLE MODE · fictional food locations · not for visiting</div>}
           {cityAvailable && (
             <div className="map-note">
               <span className="live-dot" /> A city full of little discoveries

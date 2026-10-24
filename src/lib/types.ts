@@ -48,6 +48,14 @@ export type Place = {
   listing_verified_at?: string | null;
   verification_notes?: string | null;
   created_at?: string;
+  /** True ONLY for the deliberately fictional, isolated Famous Food preview. */
+  is_demo?: boolean;
+  demo_price_inr?: number;
+  demo_diet?: "veg" | "non_veg";
+  demo_style?: string;
+  demo_opens_at?: string;
+  demo_closes_at?: string;
+  demo_overnight?: boolean;
 };
 export function placeDiscoveryGroup(place: Place): DiscoveryGroup {
   return place.discovery_group ??

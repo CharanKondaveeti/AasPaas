@@ -4,6 +4,7 @@ import { browserDb } from "@/lib/supabase";
 import { normalizeSearch } from "@/lib/validation";
 import type { FoodFiltersState, CuratedFoodDetails } from "@/features/food/foodService";
 import { cleanFoodDetails } from "@/features/food/foodService";
+import { getSampleFoodPlaces } from "@/features/food/data/demoPlaces";
 
 type Result = { places: Place[]; mode: string; truncated: boolean };
 
@@ -33,7 +34,10 @@ export async function getPlaces(
   hiddenOnly: boolean,
   signal?: AbortSignal,
   food?:FoodFiltersState,
+  sampleMode=false,
 ): Promise<Result> {
+  if(sampleMode && group==="food")
+    return getSampleFoodPlaces(bounds,query,food?{...food,dish}:{dish,budget:null,hours:"any",diet:"any",style:"any"},hiddenOnly);
   // Public, read-only RPC: database RLS restricts results to approved places.
   // This works even when a Vercel serverless function is temporarily unavailable.
   try {
