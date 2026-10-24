@@ -4,11 +4,12 @@ import type { Session } from "@supabase/supabase-js";
 import { ArrowLeft, LogOut, ShieldCheck } from "lucide-react";
 import { browserDb } from "@/lib/supabase";
 import { adminRequest } from "@/services/placeService";
-import { categories, dishes, placeDiscoveryGroup, type Place } from "@/lib/types";
+import { categories, dishes, discoveryGroups, placeDiscoveryGroup, type Place } from "@/lib/types";
 import Modal from "@/shared/components/Modal";
 export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null),
     [places, setPlaces] = useState<Place[]>([]),
+    [progress, setProgress] = useState<Record<string, { approved: number; verified: number }>>({}),
     [status, setStatus] = useState("pending"),
     [offset, setOffset] = useState(0),
     [error, setError] = useState(""),
@@ -40,6 +41,7 @@ export default function AdminPage() {
       .then((d) => {
         if (current) {
           setPlaces(d.places);
+          setProgress(d.progress || {});
           setError("");
         }
       })
@@ -200,6 +202,20 @@ export default function AdminPage() {
             Verify the name, location and photo rights before publishing. Move
             outdated places to Rejected to remove them from the public map.
           </p>
+          <section className="curation-progress" aria-label="Hyderabad launch verification progress">
+            {discoveryGroups.slice(1).map(({ value, label }) => {
+              const target = value === "food" ? 210 : value === "experiences" ? 60 : 30;
+              const count = progress[value] || { approved: 0, verified: 0 };
+              return (
+                <div className="curation-progress-group" key={value}>
+                  <strong>{label}</strong>
+                  <span>{count.verified} / {target} verified</span>
+                  <progress value={Math.min(count.verified, target)} max={target} />
+                  <small>{count.approved} approved records (not necessarily verified)</small>
+                </div>
+              );
+            })}
+          </section>
           <nav className="admin-tabs">
             {["pending", "approved", "rejected"].map((s) => (
               <button
