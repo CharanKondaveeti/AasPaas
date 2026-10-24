@@ -1,7 +1,10 @@
-import { useState } from "react";
-import { ArrowUpRight, MapPin, Clock, Wallet, X, Gem, BadgeCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowUpRight, MapPin, Clock, Wallet, X, Gem, BadgeCheck, Bookmark, Share2, Utensils } from "lucide-react";
 import { isVerifiedGem, type Place } from "@/lib/types";
 import { iconFor, iconPath } from "@/features/map/layers/icons";
+import { foodCategories, foodArtwork } from "@/features/food/data/foodCatalog";
+import { foodOpenNow, emptyFoodDetails, type CuratedFoodDetails } from "@/features/food/foodService";
+import { getFoodDetails } from "@/services/placeService";
 /** Fall back gracefully when a photo or an illustration is unavailable. */
 function DetailPhoto({ id, name }: { id: string; name: string }) {
   const [failed, setFailed] = useState(false);
@@ -36,6 +39,32 @@ export default function PlaceDetails({
   place: Place;
   onClose: () => void;
 }) {
+  const [food,setFood]=useState<CuratedFoodDetails>(emptyFoodDetails);
+  const [saved,setSaved]=useState(false);
+  const [saveIssue,setSaveIssue]=useState("");
+  useEffect(()=>{
+    setFood(emptyFoodDetails);
+    let active=true;
+    if(place.category==="Food")getFoodDetails(place.id).then((details)=>{if(active)setFood(details);});
+    return ()=>{active=false;};
+  },[place.id,place.category]);
+  useEffect(()=>{
+    try {const ids:unknown=JSON.parse(localStorage.getItem("aaspaas:saved:places")||"[]");
+     setSaved(Array.isArray(ids)&&ids.includes(place.id));}
+    catch {setSaved(false);}
+  },[place.id]);
+  function toggleSaved(){
+    try {
+     const data:unknown=JSON.parse(localStorage.getItem("aaspaas:saved:places")||"[]");
+     const list=Array.isArray(data)?data.filter((x):x is string=>typeof x==="string").slice(0,499):[];
+     const next=list.includes(place.id)?list.filter(id=>id!==place.id):[...list,place.id];
+     localStorage.setItem("aaspaas:saved:places",JSON.stringify(next));
+     setSaved(next.includes(place.id));setSaveIssue("");
+    }catch {setSaveIssue("Saving is unavailable in this browser.");}
+  }
+  const openNow=place.category==="Food"?foodOpenNow(food.hours):null;
+  const weekdayNames=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const imageForDish=(key:string)=>foodCategories.find(item=>item.key.toLowerCase().replaceAll(" ","-")===key)?.icon;
   return (
     <section className="place-details" aria-label={`${place.name} details`}>
       <button
@@ -77,19 +106,41 @@ export default function PlaceDetails({
             <MapPin size={17} />
             {place.area || "Hyderabad"}
           </p>
-          {place.hours && (
-            <p>
-              <Clock size={17} />
-              {place.hours}
-            </p>
+          {place.category!=="Food"&&place.hours&&(
+            <p><Clock size={17}/>{place.hours}</p>
           )}
-          {place.price && (
-            <p>
-              <Wallet size={17} />
-              {place.price}
-            </p>
+          {place.category!=="Food"&&place.price&&(
+            <p><Wallet size={17}/>{place.price}</p>
           )}
         </div>
+        {place.category==="Food"&&(
+          <div className="food-verified-menu">
+            <h3>Famous for what?</h3>
+            {food.dishes.length>0?food.dishes.map(d=>{
+              const art=imageForDish(d.dish_key);
+              return <div className="food-dish-row" key={d.dish_key}>
+               {art?<img src={foodArtwork(art)} alt=""/>:<Utensils size={24} color="#9D7953"/>}
+               <span>{d.dish_name}<small>{d.is_signature?"Signature dish · ":""}{d.diet==="veg"?"Vegetarian":d.diet==="non_veg"?"Non-veg":d.diet==="egg"?"Contains egg":"Diet not confirmed"}</small></span>
+               {d.price_inr!==null&&<strong>₹{Number(d.price_inr).toLocaleString("en-IN")}</strong>}
+              </div>;
+            }):<p className="quiet">Signature dishes are being curated. Prices are not yet verified.</p>}
+            {openNow!==null&&(
+             <p className="food-hours-label"><span className={openNow?"food-open-status":"food-closed-status"}>{openNow?"Open now":"Closed now"}</span> Based on curator-verified Hyderabad opening hours</p>
+            )}
+            {food.hours.length>0?<details className="food-weekly-hours"><summary><Clock size={15}/> View verified weekly hours</summary>
+             {food.hours.map((h,i)=><p key={i}>{weekdayNames[h.weekday]}: {h.opens_at.slice(0,5)}–{h.closes_at.slice(0,5)}{h.overnight?" (next day)":""}</p>)}
+            </details>:<p className="quiet">Opening hours not verified yet.</p>}
+          </div>
+        )}
+        <div className="food-detail-actions">
+          <button type="button" className={saved?"food-saved":""} aria-pressed={saved}
+            onClick={toggleSaved}><Bookmark size={16}/>{saved?"Saved":"Save place"}</button>
+          <a target="_blank" rel="noopener noreferrer"
+            href={`https://wa.me/?text=${encodeURIComponent(`Found ${place.name} on AasPaas! ${place.famous_for}. Directions: https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`)}`}>
+             <Share2 size={16}/> WhatsApp
+          </a>
+        </div>
+        {saveIssue&&<p className="quiet" role="status">{saveIssue}</p>}
         <a
           className="primary directions"
           href={`https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`}

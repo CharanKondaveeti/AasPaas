@@ -20,6 +20,8 @@ type PublicDatabase = {
         };
         Returns: Place[];
       };
+      explore_famous_food: { Args:{west:number;south:number;east:number;north:number;search_text?:string;filter_dish?:string;filter_budget?:number|null;filter_hours?:string;filter_diet?:string;filter_style?:string;only_hidden_gems?:boolean};Returns:Place[]; };
+      famous_food_details: { Args:{place_uuid:string};Returns:unknown; };
       explore_discoveries: {
         Args: {
           west: number;

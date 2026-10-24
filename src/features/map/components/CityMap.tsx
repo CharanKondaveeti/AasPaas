@@ -8,7 +8,7 @@ import { CITY_CENTER, placeDiscoveryGroup, isVerifiedGem, type Place, type Bound
 import { loadCityStyle, applyCityPalette } from "../layers/style";
 import { addIndiaAvailabilityLayers, containsHyderabad, loadIndiaRegions, INDIA_MIN_ZOOM, INDIA_VIEW_BOUNDS, HYDERABAD_OVERVIEW_ZOOM } from "../layers/indiaRegions";
 import type { MultiPolygon } from "geojson";
-import { iconFor, iconNames, iconPath } from "../layers/icons";
+import { iconFor, iconNames, extraFoodIcons, iconPath } from "../layers/icons";
 import { drawShopMarker, shopMarkerId } from "../layers/shopPillMarker";
 import { drawDiscoveryMarker } from "../layers/discoveryMarker";
 
@@ -89,7 +89,7 @@ export default function CityMap(props: Props) {
             // Food miniatures are composed with white rounded name pills
             // and orange dots into one native GPU image per shop.
             const loadedIcons = await Promise.allSettled(
-              iconNames.map(async (name) => {
+              [...iconNames,...extraFoodIcons].map(async (name) => {
                 const image = new Image();
                 image.src = iconPath(name);
                 await image.decode();

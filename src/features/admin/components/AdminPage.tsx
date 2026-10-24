@@ -6,6 +6,7 @@ import { browserDb } from "@/lib/supabase";
 import { adminRequest } from "@/services/placeService";
 import { categories, dishes, discoveryGroups, placeDiscoveryGroup, type Place } from "@/lib/types";
 import Modal from "@/shared/components/Modal";
+import FoodCurator from "@/features/food/components/FoodCurator";
 export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null),
     [places, setPlaces] = useState<Place[]>([]),
@@ -414,6 +415,7 @@ export default function AdminPage() {
               {busy ? "Saving…" : "Save review"}
             </button>
           </form>
+          {editing.category==="Food"&&session&&<FoodCurator place={editing} token={session.access_token}/>}
         </Modal>
       )}
     </main>
