@@ -74,7 +74,7 @@ function roundedPill(
   ctx.closePath();
 }
 
-export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
+export function drawShopMarker(art: HTMLImageElement, name: string, verifiedGem = false): ImageData {
   const measureCanvas = document.createElement("canvas");
   const measureCtx = measureCanvas.getContext("2d");
   if (!measureCtx) throw new Error("Unable to draw food map markers");
@@ -150,7 +150,7 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
   const drawnWidth = Math.min(ART_SIZE, ART_SIZE * imageRatio);
   const drawnHeight = Math.min(ART_SIZE, ART_SIZE / imageRatio);
   ctx.drawImage(art, crop.x, crop.y, crop.w, crop.h,
-    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 8,
+    (width - drawnWidth) / 2, PILL_TOP - drawnHeight + 16,
     drawnWidth, drawnHeight);
 
 
@@ -166,5 +166,22 @@ export function drawShopMarker(art: HTMLImageElement, name: string): ImageData {
     ctx.fillText(lines[1], width / 2, middleY + 9);
   }
 
+  if (verifiedGem) {
+    // Small diamond overlay: only included for verified Hidden Gems.
+    const gx = width / 2 + 44, gy = 23;
+    ctx.fillStyle = "#8039CA";
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(gx, gy - 10);
+    ctx.lineTo(gx + 10, gy);
+    ctx.lineTo(gx, gy + 10);
+    ctx.lineTo(gx - 10, gy);
+    ctx.closePath();
+    ctx.stroke();
+  }
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }

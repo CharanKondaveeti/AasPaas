@@ -22,7 +22,25 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .range(offset, offset + 49);
     if (error) throw error;
-    return Response.json({ places: data });
+    // Only admins can see the full curation pipeline.
+    const { data: candidates, error: progressError } = await client
+      .from("places")
+      .select("discovery_group, listing_verified_at")
+      .eq("status", "approved")
+      .limit(1000);
+    if (progressError) throw progressError;
+    const progress: Record<string, { approved: number; verified: number }> = {
+      food: { approved: 0, verified: 0 },
+      experiences: { approved: 0, verified: 0 },
+      specialty_shops: { approved: 0, verified: 0 },
+    };
+    for (const candidate of candidates || []) {
+      const group = candidate.discovery_group as keyof typeof progress;
+      if (!progress[group]) continue;
+      progress[group].approved++;
+      if (candidate.listing_verified_at) progress[group].verified++;
+    }
+    return Response.json({ places: data, progress });
   } catch (error) {
     return failure(error);
   }
@@ -46,12 +64,21 @@ export async function PATCH(request: Request) {
       throw new ApiError(400, parsed.error.issues[0].message);
     const { data: old, error: readError } = await client
       .from("places")
-      .select("photo_path")
+      .select("photo_path, listing_verified_at, verification_notes")
       .eq("id", id)
       .single();
     if (readError || !old) throw new ApiError(404, "Place not found.");
     if (parsed.data.status === "approved" && !parsed.data.source_url)
       throw new ApiError(400, "Add a verification source before publishing.");
+    const { listing_verified, ...safeFields } = parsed.data;
+    const verifiedAt = listing_verified === true ? new Date().toISOString()
+      : listing_verified === false ? null : old.listing_verified_at;
+    const notes = parsed.data.verification_notes ?? old.verification_notes;
+    if (verifiedAt && (!parsed.data.source_url || (notes || "").trim().length < 15))
+      throw new ApiError(400, "Verified listings require a source and specific verification notes.");
+    if (parsed.data.is_hidden_gem === true &&
+      (!verifiedAt || (parsed.data.hidden_gem_reason || "").trim().length < 12))
+      throw new ApiError(400, "Hidden Gems need verification and a clear local reason.");
     photo = await uploadPhoto(form.get("photo"));
     if (
       parsed.data.status === "approved" &&
@@ -65,7 +92,8 @@ export async function PATCH(request: Request) {
     const { error } = await client
       .from("places")
       .update({
-        ...parsed.data,
+        ...safeFields,
+        ...(listing_verified !== undefined ? { listing_verified_at: verifiedAt } : {}),
         ...(photo ? { photo_path: photo } : {}),
         updated_at: new Date().toISOString(),
       })

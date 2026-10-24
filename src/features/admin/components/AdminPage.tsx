@@ -4,11 +4,12 @@ import type { Session } from "@supabase/supabase-js";
 import { ArrowLeft, LogOut, ShieldCheck } from "lucide-react";
 import { browserDb } from "@/lib/supabase";
 import { adminRequest } from "@/services/placeService";
-import { categories, dishes, type Place } from "@/lib/types";
+import { categories, dishes, discoveryGroups, placeDiscoveryGroup, type Place } from "@/lib/types";
 import Modal from "@/shared/components/Modal";
 export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null),
     [places, setPlaces] = useState<Place[]>([]),
+    [progress, setProgress] = useState<Record<string, { approved: number; verified: number }>>({}),
     [status, setStatus] = useState("pending"),
     [offset, setOffset] = useState(0),
     [error, setError] = useState(""),
@@ -40,6 +41,7 @@ export default function AdminPage() {
       .then((d) => {
         if (current) {
           setPlaces(d.places);
+          setProgress(d.progress || {});
           setError("");
         }
       })
@@ -114,6 +116,11 @@ export default function AdminPage() {
         source_url: form.get("source_url") || null,
         photo_credit: form.get("photo_credit") || null,
         status: String(form.get("status")),
+        discovery_group: String(form.get("discovery_group")),
+        listing_verified: form.get("listing_verified") === "on",
+        verification_notes: form.get("verification_notes") || null,
+        is_hidden_gem: form.get("is_hidden_gem") === "on",
+        hidden_gem_reason: form.get("hidden_gem_reason") || null,
       };
       const payload = new FormData();
       payload.set("id", editing.id);
@@ -195,6 +202,20 @@ export default function AdminPage() {
             Verify the name, location and photo rights before publishing. Move
             outdated places to Rejected to remove them from the public map.
           </p>
+          <section className="curation-progress" aria-label="Hyderabad launch verification progress">
+            {discoveryGroups.slice(1).map(({ value, label }) => {
+              const target = value === "food" ? 210 : value === "experiences" ? 60 : 30;
+              const count = progress[value] || { approved: 0, verified: 0 };
+              return (
+                <div className="curation-progress-group" key={value}>
+                  <strong>{label}</strong>
+                  <span>{count.verified} / {target} verified</span>
+                  <progress value={Math.min(count.verified, target)} max={target} />
+                  <small>{count.approved} approved records (not necessarily verified)</small>
+                </div>
+              );
+            })}
+          </section>
           <nav className="admin-tabs">
             {["pending", "approved", "rejected"].map((s) => (
               <button
@@ -222,7 +243,7 @@ export default function AdminPage() {
             <div className="admin-grid">
               {places.map((p) => (
                 <article key={p.id}>
-                  <span className="eyebrow">{p.category}</span>
+                  <span className="eyebrow">{placeDiscoveryGroup(p).replace("_", " ")} · {p.listing_verified_at ? "Verified" : "Needs verification"}</span>
                   <h2>{p.name}</h2>
                   <p>{p.famous_for}</p>
                   <p className="quiet">
@@ -340,6 +361,34 @@ export default function AdminPage() {
                 </select>
               </label>
             </div>
+            <div className="field-pair">
+              <label>
+                Discovery group
+                <select name="discovery_group" defaultValue={placeDiscoveryGroup(editing)}>
+                  <option value="food">Famous Food</option>
+                  <option value="experiences">Scenic & Culture</option>
+                  <option value="specialty_shops">Specialty Shops</option>
+                </select>
+              </label>
+              <label className="curation-check">
+                <input type="checkbox" name="listing_verified" defaultChecked={Boolean(editing.listing_verified_at)} />
+                Evidence checked — mark as verified
+              </label>
+            </div>
+            <label>
+              Verification notes (where and how did you confirm details?)
+              <textarea name="verification_notes" rows={3} defaultValue={editing.verification_notes || ""} maxLength={700}
+                placeholder="Checked shop identity and entrance coordinates against official source on..." />
+            </label>
+            <label className="curation-check">
+              <input type="checkbox" name="is_hidden_gem" defaultChecked={Boolean(editing.is_hidden_gem)} />
+              Hidden Gem — verified local favourite, not just a popular chain
+            </label>
+            <label>
+              Why is this a Hidden Gem?
+              <input name="hidden_gem_reason" defaultValue={editing.hidden_gem_reason || ""} maxLength={300}
+                placeholder="Locals recommend it for..." />
+            </label>
             <label>
               Replace photo
               <input

@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/core.test.ts tests/database.test.ts tests/city-zoom-reveal.test.ts tests/place-webp-icons.test.ts tests/github-pages.test.ts tests/shop-pill-marker.test.ts",
+    "test": "node --import tsx --test tests/core.test.ts tests/database.test.ts tests/city-zoom-reveal.test.ts tests/place-webp-icons.test.ts tests/github-pages.test.ts tests/shop-pill-marker.test.ts tests/discovery.test.ts",
     "postinstall": "node scripts/prepare-map.mjs"
   },
   "dependencies": {

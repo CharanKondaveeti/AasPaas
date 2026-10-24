@@ -9,15 +9,14 @@ import {
   X,
   SlidersHorizontal,
   ChevronRight,
-  Leaf,
   Landmark,
   Utensils,
   ShoppingBag,
-  FerrisWheel,
   Compass,
+  Gem,
 } from "lucide-react";
 import {
-  categories,
+  isVerifiedGem,
   dishes,
   CITY_BOUNDS,
   CITY_CENTER,
@@ -30,19 +29,19 @@ import PlaceDetails from "./PlaceDetails";
 import SuggestionForm from "@/features/suggestions/components/SuggestionForm";
 const CityMap=lazy(()=>import("@/features/map/components/CityMap"));
 const githubPagesPreview = import.meta.env.VITE_GITHUB_PAGES === "true";
-const categoryIcons = [
-  Compass,
-  Utensils,
-  Landmark,
-  Leaf,
-  ShoppingBag,
-  FerrisWheel,
-];
+const discoveryTabs = [
+  { value: "all", label: "Discover", Icon: Compass },
+  { value: "food", label: "Famous Food", Icon: Utensils },
+  { value: "experiences", label: "Scenic & Culture", Icon: Landmark },
+  { value: "specialty_shops", label: "Special Shops", Icon: ShoppingBag },
+] as const;
 export default function ExplorePage() {
   const [bounds, setBounds] = useState<Bounds>(CITY_BOUNDS),
     [query, setQuery] = useState(""),
     [cityAvailable, setCityAvailable] = useState(true),
     [category, setCategory] = useState("All"),
+    [group, setGroup] = useState("all"),
+    [hiddenOnly, setHiddenOnly] = useState(false),
     [dish, setDish] = useState(""),
     [places, setPlaces] = useState<Place[]>([]),
     [selected, setSelected] = useState<Place | null>(null),
@@ -87,7 +86,7 @@ export default function ExplorePage() {
     }
     const timer = setTimeout(() => {
       setLoading(true);
-      getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, abort.signal)
+      getPlaces(intersectsCity ? cityBounds : CITY_BOUNDS, query, category, dish, group, hiddenOnly, abort.signal)
         .then((data) => {
           setPlaces(data.places);
           setMode(data.mode);
@@ -105,7 +104,7 @@ export default function ExplorePage() {
       clearTimeout(timer);
       abort.abort();
     };
-  }, [bounds, query, category, dish, retry]);
+  }, [bounds, query, category, dish, group, hiddenOnly, retry]);
   function select(p: Place) {
     setSelected(p);
     setShowList(false);
@@ -167,24 +166,33 @@ export default function ExplorePage() {
           )}
         </div>
         <nav className="category-filters" aria-label="Place categories">
-          {categories.map((c, i) => {
-            const Icon = categoryIcons[i];
-            return (
-              <button
-                key={c}
-                className={c === category ? "active" : ""}
-                aria-pressed={c === category}
-                onClick={() => {
-                  setCategory(c);
-                  setDish("");
-                  setSelected(null);
-                }}
-              >
-                <Icon size={16} />
-                {c === "Fun & Activities" ? "Things to do" : c}
-              </button>
-            );
-          })}
+          {discoveryTabs.map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              className={group === value ? "active" : ""}
+              aria-pressed={group === value}
+              onClick={() => {
+                setGroup(value);
+                setCategory(value === "food" ? "Food" : "All");
+                setDish("");
+                setSelected(null);
+              }}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+          <button
+            className={hiddenOnly ? "active hidden-gems-filter" : "hidden-gems-filter"}
+            aria-pressed={hiddenOnly}
+            onClick={() => {
+              setHiddenOnly((value) => !value);
+              setSelected(null);
+            }}
+          >
+            <Gem size={16} />
+            Hidden Gems
+          </button>
         </nav>
         {category === "Food" && (
           <nav className="dish-filters" aria-label="Food filters">
@@ -262,7 +270,7 @@ export default function ExplorePage() {
                   <p>
                     {query
                       ? `Searching Hyderabad for “${query}”`
-                      : "Old-city stories. A cup of chai. A little green. Find your kind of Hyderabad."}
+                      : "Famous dishes, hidden gems and special local corners. Discover what makes Hyderabad different."}
                   </p>
                   <div className="panel-count">
                     <span className="live-dot" />
@@ -318,13 +326,16 @@ export default function ExplorePage() {
                       <Compass size={28} />
                       <h3>A little unexplored, for now.</h3>
                       <p>
-                        Try another category, move the map, or suggest a
-                        favourite place.
+                        {hiddenOnly
+                          ? "No curator-verified Hidden Gems here yet. Explore more of the map or try other discoveries."
+                          : "Try another category, move the map, or suggest a favourite place."}
                       </p>
                       <button
                         onClick={() => {
                           setQuery("");
                           setCategory("All");
+                          setGroup("all");
+                          setHiddenOnly(false);
                           setDish("");
                         }}
                       >
@@ -353,7 +364,7 @@ export default function ExplorePage() {
                         <span className="place-row-text">
                           <strong>{p.name}</strong>
                           <span>
-                            {p.dish || p.category} <b>·</b> {p.area}
+                            {isVerifiedGem(p) ? "♦ Hidden Gem" : (p.dish || p.category)} <b>·</b> {p.area}
                           </span>
                         </span>
                         <ChevronRight size={16} />

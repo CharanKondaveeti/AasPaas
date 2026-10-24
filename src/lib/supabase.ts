@@ -20,6 +20,20 @@ type PublicDatabase = {
         };
         Returns: Place[];
       };
+      explore_discoveries: {
+        Args: {
+          west: number;
+          south: number;
+          east: number;
+          north: number;
+          search_text?: string;
+          filter_category?: string;
+          filter_dish?: string;
+          filter_group?: string;
+          only_hidden_gems?: boolean;
+        };
+        Returns: Place[];
+      };
     };
     Enums: {};
     CompositeTypes: {};

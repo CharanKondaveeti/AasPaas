@@ -1,4 +1,5 @@
 import { seedPlaces } from "../../features/explore/data/places";
+import { isVerifiedGem, placeDiscoveryGroup } from "../../lib/types";
 import { normalizeSearch, parseBounds } from "../../lib/validation";
 import { backendReady, db, failure, ApiError } from "../../lib/server";
 export async function GET(request: Request) {
@@ -12,7 +13,11 @@ export async function GET(request: Request) {
     }
     const q = normalizeSearch((p.get("q") || "").slice(0, 100)),
       category = p.get("category") || "All",
-      dish = p.get("dish") || "";
+      dish = p.get("dish") || "",
+      group = p.get("group") || "all",
+      hiddenOnly = p.get("hidden") === "1";
+    if (!["all", "food", "experiences", "specialty_shops"].includes(group))
+      throw new ApiError(400, "Invalid discovery group.");
     if (!backendReady()) {
       const places = seedPlaces.filter(
         (v) =>
@@ -23,6 +28,8 @@ export async function GET(request: Request) {
               v.latitude <= bounds[3])) &&
           (category === "All" || v.category === category) &&
           (!dish || v.dish === dish) &&
+          (group === "all" || placeDiscoveryGroup(v) === group) &&
+          (!hiddenOnly || isVerifiedGem(v)) &&
           (!q ||
             normalizeSearch(
               [v.name, v.area, v.category, v.dish, v.famous_for].join(" "),
@@ -30,7 +37,7 @@ export async function GET(request: Request) {
       );
       return Response.json({ places, mode: "curated", truncated: false });
     }
-    const { data, error } = await db().rpc("explore_places", {
+    const { data, error } = await db().rpc("explore_discoveries", {
       west: bounds[0],
       south: bounds[1],
       east: bounds[2],
@@ -38,6 +45,8 @@ export async function GET(request: Request) {
       search_text: q,
       filter_category: category,
       filter_dish: dish,
+      filter_group: group,
+      only_hidden_gems: hiddenOnly,
     });
     if (error) throw error;
     return Response.json({

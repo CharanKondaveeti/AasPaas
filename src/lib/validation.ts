@@ -40,6 +40,12 @@ export const editSchema = suggestionSchema
       .refine((v) => v.startsWith("https://"))
       .nullable(),
     photo_credit: text(0, 200).nullable(),
+    discovery_group: z.enum(["food", "experiences", "specialty_shops"]).optional(),
+    is_hidden_gem: z.boolean().optional(),
+    hidden_gem_reason: text(0, 300).nullable().optional(),
+    verification_notes: text(0, 700).nullable().optional(),
+    // A decision, not a caller-supplied timestamp. Server sets verified_at.
+    listing_verified: z.boolean().optional(),
     status: z.enum(["pending", "approved", "rejected"]),
   })
   .strict();

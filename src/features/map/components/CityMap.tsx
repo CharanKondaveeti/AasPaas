@@ -4,12 +4,13 @@ import * as maplibregl from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Map as LibreMap, Marker, type GeoJSONSource } from "maplibre-gl";
 import { LocateFixed, Plus, Minus, Compass, RotateCcw } from "lucide-react";
-import { CITY_CENTER, type Place, type Bounds } from "@/lib/types";
+import { CITY_CENTER, placeDiscoveryGroup, isVerifiedGem, type Place, type Bounds } from "@/lib/types";
 import { loadCityStyle, applyCityPalette } from "../layers/style";
 import { addIndiaAvailabilityLayers, containsHyderabad, loadIndiaRegions, INDIA_MIN_ZOOM, INDIA_VIEW_BOUNDS, HYDERABAD_OVERVIEW_ZOOM } from "../layers/indiaRegions";
 import type { MultiPolygon } from "geojson";
 import { iconFor, iconNames, iconPath } from "../layers/icons";
 import { drawShopMarker, shopMarkerId } from "../layers/shopPillMarker";
+import { drawDiscoveryMarker } from "../layers/discoveryMarker";
 
 /** Only reveal small real-place icons after zooming into Hyderabad. */
 const PLACE_ICON_MIN_ZOOM = 12.8;
@@ -200,18 +201,22 @@ export default function CityMap(props: Props) {
       features: props.places.flatMap((p) => {
         if (!Number.isFinite(p.longitude) || !Number.isFinite(p.latitude)) return [];
         const icon = iconFor(p.category, p.dish, p.name, p.famous_for);
-        // Don't show incorrect food art or any old fallback category pins.
-        if (!icon) return [];
-        const image = foodArt.current.get(icon);
-        if (!image) return [];
-        const imageId = shopMarkerId(p.id, p.name, icon);
+        const image = icon ? foodArt.current.get(icon) : undefined;
+        const group = placeDiscoveryGroup(p);
+        const gem = isVerifiedGem(p);
+        // Dish illustrations stay unchanged; vector pills show niche places
+        // without invented food art, ugly buildings or numbered pins.
+        const imageId = icon && image
+          ? (gem ? shopMarkerId(p.id, p.name, icon + "-gem") : shopMarkerId(p.id, p.name, icon))
+          : shopMarkerId(p.id, p.name, "discovery-" + group + "-" + gem);
         if (!map.current!.hasImage(imageId)) {
           try {
-            map.current!.addImage(imageId, drawShopMarker(image, p.name), {
-              pixelRatio: 3,
-            });
+            const marker = icon && image
+              ? (gem ? drawShopMarker(image, p.name, true) : drawShopMarker(image, p.name))
+              : drawDiscoveryMarker(p.name, group, gem);
+            map.current!.addImage(imageId, marker, { pixelRatio: 3 });
           } catch (error) {
-            console.warn("Could not render food shop illustration:", error);
+            console.warn("Could not render discovery marker:", error);
             return [];
           }
         }
