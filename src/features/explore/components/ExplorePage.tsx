@@ -25,7 +25,7 @@ import {
   type Place,
 } from "@/lib/types";
 import { getPlaces } from "@/services/placeService";
-import { iconFor } from "@/features/map/layers/icons";
+import { iconFor, iconPath } from "@/features/map/layers/icons";
 import PlaceDetails from "./PlaceDetails";
 import SuggestionForm from "@/features/suggestions/components/SuggestionForm";
 const CityMap=lazy(()=>import("@/features/map/components/CityMap"));
@@ -339,7 +339,7 @@ export default function ExplorePage() {
                           className={`place-icon ${p.category === "Nature" ? "green" : ""}`}
                         >
                           <img
-                            src={`/icons/${iconFor(p.category, p.dish)}.svg`}
+                            src={iconPath(iconFor(p.category, p.dish))}
                             alt=""
                           />
                         </span>
