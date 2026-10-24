@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ArrowUpRight, MapPin, Clock, Wallet, X } from "lucide-react";
-import type { Place } from "@/lib/types";
+import { ArrowUpRight, MapPin, Clock, Wallet, X, Gem, BadgeCheck } from "lucide-react";
+import { isVerifiedGem, type Place } from "@/lib/types";
 import { iconFor, iconPath } from "@/features/map/layers/icons";
 /** Fall back gracefully when a photo or an illustration is unavailable. */
 function DetailPhoto({ id, name }: { id: string; name: string }) {
@@ -63,7 +63,14 @@ export default function PlaceDetails({
           {place.category} {place.dish && ` / ${place.dish}`}
         </span>
         <h2>{place.name}</h2>
+        <div className="detail-discovery-badges">
+          {isVerifiedGem(place) && <span className="detail-gem-badge"><Gem size={14} /> Hidden Gem</span>}
+          {place.listing_verified_at && <span className="detail-verified-badge"><BadgeCheck size={14} /> Curator verified</span>}
+        </div>
         <p className="famous">{place.famous_for}</p>
+        {isVerifiedGem(place) && place.hidden_gem_reason && (
+          <p className="detail-gem-reason">{place.hidden_gem_reason}</p>
+        )}
         <p className="description">{place.description}</p>
         <div className="detail-facts">
           <p>
@@ -91,7 +98,11 @@ export default function PlaceDetails({
         >
           Get directions <ArrowUpRight size={18} />
         </a>
-        <p className="quiet">Check current hours and access before visiting.</p>
+        <p className="quiet">
+          {place.listing_verified_at
+            ? `Listing checked ${new Date(place.listing_verified_at).toLocaleDateString("en-IN")}. Confirm opening hours before visiting.`
+            : "Details are source-listed but not recently verified. Check hours and access before visiting."}
+        </p>
         {place.source_url && (
           <a
             className="source-link"
