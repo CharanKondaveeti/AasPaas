@@ -1,6 +1,5 @@
 import { ArrowUpRight, MapPin, Clock, Wallet, X } from "lucide-react";
 import type { Place } from "@/lib/types";
-import { illustrationFor } from "@/features/map/layers/illustrations";
 export default function PlaceDetails({
   place,
   onClose,
@@ -23,14 +22,7 @@ export default function PlaceDetails({
         {place.photo_path ? (
           <img src={`/api/photos?id=${place.id}`} alt={place.name} />
         ) : (
-          <>
-            <img
-              className="cover-illustration"
-              src={illustrationFor(place)}
-              alt=""
-            />
-            <span>Discover Hyderabad</span>
-          </>
+          <span>Discover Hyderabad</span>
         )}
       </div>
       <div className="detail-body">
@@ -66,11 +58,6 @@ export default function PlaceDetails({
         >
           Get directions <ArrowUpRight size={18} />
         </a>
-        {place.name === "Charminar" && (
-          <p className="quiet">
-            Zoom in and tilt the map to see our stylized 3D miniature.
-          </p>
-        )}
         <p className="quiet">Check current hours and access before visiting.</p>
         {place.source_url && (
           <a
