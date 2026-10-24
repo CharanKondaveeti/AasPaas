@@ -29,21 +29,23 @@ test("dish matches the correct miniature, without inventing food identities", ()
   assert.equal(iconFor("Nature",null),null);
 });
 
-test("map puts shop names beneath WebP illustrations and retains click navigation", () => {
+test("map draws whole illustrated shop pills in one selectable GPU layer", () => {
   const code=readFileSync("src/features/map/components/CityMap.tsx","utf8");
   for(const needle of [
     'source: "aaspaas-places"',
     'minzoom: PLACE_ICON_MIN_ZOOM',
     '"icon-image": ["get", "icon"]',
-    '"text-field": ["get", "name"]',
-    '"text-anchor": "top"',
-    '"text-offset": [0, 0.35]',
+    '"icon-anchor": "bottom"',
     '"icon-allow-overlap": false',
+    'drawShopMarker(image, p.name)',
+    'shopMarkerId(p.id, p.name, icon)',
     'instance.on("click", PLACE_ICON_LAYER',
     'latest.current.onSelect(place)',
+    'icon: imageId',
     'name: p.name',
     'iconFor(p.category, p.dish, p.name, p.famous_for)',
   ]) assert.ok(code.includes(needle),needle);
+  assert.ok(!code.includes('"text-field": ["get", "name"]'));
   assert.ok(!code.includes("cluster-count"));
   assert.ok(!code.includes('"cluster": true'));
 });
