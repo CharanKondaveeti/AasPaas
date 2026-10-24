@@ -33,3 +33,10 @@ Long descriptions are never substituted with invented menu items.
 - All visible cards respect viewport-based spacing, chosen by score on every zoom; less important cards are hidden when space becomes limited.
 - All records use identical priority logic, including food preview records. Admins can adjust prominence scores and add a rationale.
 - Supabase RPCs sort public places by priority before the limit; food preview ranks within each dish to retain category balance.
+
+## Smooth map dragging
+- MapLibre keeps the same GPU markers while a user drags. A camera pan does not call `source.setData` or rebuild the icons.
+- Place queries fetch a padded region and refresh only when the viewport approaches its edge, preventing repeated disappearing/reappearing cards on short drags.
+- New RPC results merge into a bounded geographic candidate pool; a replaced viewport response does not wipe the still-nearby places.
+- The candidate pool is **not** a sticky-reveal feature. Every zoom uses current priority thresholds and spacing, so zooming out still declutters.
+- Changing filters clears the candidate pool immediately. Panning to a distant area prunes out-of-range candidates.
