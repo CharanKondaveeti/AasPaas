@@ -1,7 +1,7 @@
 import type { Place } from "@/lib/types";
 
 /** Only place types with matching WebP illustrations receive map artwork. */
-export const iconNames = ["biryani", "punugulu", "samosa", "chaat", "dosa", "tea", "jalebi", "idli", "kebab", "pani-puri"] as const;
+export const iconNames = ["biryani", "punugulu", "samosa", "chaat", "dosa", "chai", "jalebi", "idli", "kebab", "pani-puri"] as const;
 export type PlaceIcon = (typeof iconNames)[number];
 const available = new Set<string>(iconNames);
 
