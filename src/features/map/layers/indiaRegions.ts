@@ -44,8 +44,8 @@ export async function loadIndiaRegions(signal: AbortSignal): Promise<{
   regions: FeatureCollection;
 }> {
   const [hyderabadResponse, regionsResponse] = await Promise.all([
-    fetch("/map-data/hyderabad-ghmc.geojson", {signal}),
-    fetch("/map-data/india-launch-regions.geojson", {signal}),
+    fetch(`${import.meta.env.BASE_URL}map-data/hyderabad-ghmc.geojson`, {signal}),
+    fetch(`${import.meta.env.BASE_URL}map-data/india-launch-regions.geojson`, {signal}),
   ]);
   if (!hyderabadResponse.ok || !regionsResponse.ok)
     throw new Error("India map boundaries are unavailable");
