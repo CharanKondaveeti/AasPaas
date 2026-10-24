@@ -1,3 +1,4 @@
+import { storedIconPath } from "@/features/map/layers/icons";
 /** Illustrated icons are original AasPaas art, not third-party logos or venue photos. */
 export const foodCategories = [
  { key:"Biryani", label:"Biryani", icon:"biryani" },
@@ -28,6 +29,9 @@ export const foodStyleFilters = [
  {key:"desserts",label:"Desserts"},{key:"cafes",label:"Cafés"},
 ] as const;
 export const foodBudgets = [50,100,200,500] as const;
-export function foodArtwork(name:string):string {
+export function foodArtworkFallback(name:string):string {
  return `${import.meta.env.BASE_URL}food-art/${name}.svg`;
+}
+export function foodArtwork(name:string):string {
+ return storedIconPath(name) ?? foodArtworkFallback(name);
 }
