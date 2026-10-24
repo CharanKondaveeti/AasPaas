@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { CITY_CENTER } from "../src/lib/types.ts";
 import { containsHyderabad, INDIA_MIN_ZOOM, HYDERABAD_OVERVIEW_ZOOM } from "../src/features/map/layers/indiaRegions.ts";
 import type { MultiPolygon } from "geojson";
+import { keepRevealedPlaces, PLACE_REVEAL_ZOOM, PLACE_HIDE_ZOOM } from "../src/features/map/layers/markerPersistence.ts";
 
 test("India map keeps navigation and reveals only actual place icons at close zoom", () => {
   assert.ok(INDIA_MIN_ZOOM < 5);
@@ -12,7 +13,9 @@ test("India map keeps navigation and reveals only actual place icons at close zo
   assert.match(map, /minZoom: INDIA_MIN_ZOOM/);
   assert.match(map, /renderWorldCopies: false/);
   assert.ok(map.includes('loadIndiaRegions(abort.signal)'));
-  assert.ok(map.includes('minzoom: PLACE_ICON_MIN_ZOOM'));
+  assert.ok(map.includes('minzoom: PLACE_HIDE_ZOOM'));
+  assert.ok(map.includes('fadeDuration: 0'));
+  assert.ok(map.includes('"icon-allow-overlap": true'));
   assert.ok(map.includes('type: "symbol"'));
   for (const artwork of ["galli-greenery-base", "cluster-icon-left", "cluster-icon-middle",
     "cluster-icon-right", "bushy-green-pattern", "loadGeneratedScenery", "GREENERY_ASSETS"]) {
@@ -60,4 +63,32 @@ test("municipal boundary uses cool blue and fades completely at street zoom", ()
   }
   const basemap = readFileSync("src/features/map/layers/style.ts","utf8");
   assert.ok(basemap.includes('safeLayout(map, id, "icon-image", "")'));
+});
+
+test("already revealed shops remain through normal zoom-out, but not city-height zoom", () => {
+  type Spot = { id: string; latitude: number; longitude: number };
+  const seen = new Map<string, Spot>();
+  const first = { id: "a", latitude: 17.36, longitude: 78.47 };
+  const second = { id: "b", latitude: 17.37, longitude: 78.48 };
+  const visible = (_p: Spot) => true;
+
+  assert.deepEqual(keepRevealedPlaces(seen, [first], PLACE_REVEAL_ZOOM - 0.1, visible), []);
+  assert.deepEqual(keepRevealedPlaces(seen, [first], PLACE_REVEAL_ZOOM, visible), [first]);
+  // A different viewport/Supabase response must not remove a previously seen place.
+  assert.deepEqual(keepRevealedPlaces(seen, [second], PLACE_REVEAL_ZOOM - 0.5, visible), [first]);
+  assert.deepEqual(keepRevealedPlaces(seen, [second], PLACE_REVEAL_ZOOM, visible), [first, second]);
+  assert.deepEqual(keepRevealedPlaces(seen, [], PLACE_HIDE_ZOOM, visible), [first, second]);
+  assert.deepEqual(keepRevealedPlaces(seen, [], PLACE_HIDE_ZOOM - 0.1, visible), []);
+  // Once the user zooms far enough out, the old session markers are forgotten.
+  assert.deepEqual(keepRevealedPlaces(seen, [], PLACE_REVEAL_ZOOM - 0.1, visible), []);
+});
+
+test("only places actually inside the viewed area get remembered", () => {
+  const seen = new Map();
+  const first = { id: "near", latitude: 17.36, longitude: 78.47 };
+  const second = { id: "outside", latitude: 17.43, longitude: 78.52 };
+  assert.deepEqual(
+    keepRevealedPlaces(seen, [first, second], PLACE_REVEAL_ZOOM, p => p.id === "near"),
+    [first],
+  );
 });
