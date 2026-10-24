@@ -32,9 +32,9 @@ test("Nimrah style includes white rounded capsule, two text lines and a single o
   const source = readFileSync("src/features/map/layers/shopPillMarker.ts", "utf8");
   for (const token of [
     'ctx.drawImage(art',
-    'ctx.fillStyle = "#FA8123"',
-    'ctx.fillStyle = "#FFFFFF"',
-    'ctx.fillStyle = "#17211D"',
+    'ctx.fillStyle="#FA8123"',
+    'ctx.fillStyle="#FFFFFF"',
+    'ctx.fillStyle="#17211D"',
     'ctx.shadowBlur=selected?15:11',
     'roundedPill(ctx',
     'ctx.getImageData(',
